@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard Tickets · FARMAMIA</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<!-- SheetJS para leer Excel directamente desde el navegador -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+  :root {
+    --tomato:      #FF3B1F;
+    --tomato-dark: #C8280C;
+    --violet:      #49267F;
+    --violet-mid:  #6B3DAA;
+    --violet-pale: #EDE8F7;
+    --steel:       #D9E0E8;
+    --steel-dark:  #B0BEC9;
+    --bg:          #F2F4F8;
+    --card:        #FFFFFF;
+    --text:        #16213E;
+    --muted:       #6B7280;
+    --border:      #E5E8EE;
+    --green:       #0FA870;
+    --amber:       #F59E0B;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: linear-gradient(135deg, var(--violet) 0%, #2A1060 100%);
+    border-bottom: 3px solid var(--tomato);
+    position: sticky; top: 0; z-index: 50;
+    box-shadow: 0 4px 24px rgba(73,38,127,0.25);
+  }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 2px dashed var(--violet-mid);
+    background: var(--violet-pale);
+    border-radius: 14px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--tomato);
+    background: #FFF0EE;
+  }
+  .upload-zone input[type=file] { display: none; }
+
+  /* ── UPLOAD BAR (after load) ── */
+  .upload-bar {
+    background: white;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    padding: 0.75rem 1.25rem;
+    display: flex; align-items: center; gap: 1rem;
+    box-shadow: 0 2px 10px rgba(73,38,127,0.06);
+  }
+  .file-badge {
+    background: var(--violet-pale);
+    color: var(--violet);
+    border-radius: 8px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .btn-load {
+    background: var(--violet);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.78rem;
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    display: flex; align-items: center; gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .btn-load:hover { background: var(--violet-mid); transform: scale(1.02); }
+  .btn-reset-filters {
+    background: var(--tomato);
+    color: white; border: none; border-radius: 8px;
+    padding: 0.5rem 1.1rem; font-size: 0.78rem;
+    font-family: 'Sora', sans-serif; font-weight: 700;
+    cursor: pointer; transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .btn-reset-filters:hover { background: var(--tomato-dark); }
+
+  /* ── KPI CARDS ── */
+  .kpi-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem;
+    box-shadow: 0 2px 16px rgba(73,38,127,0.07);
+    border-left: 5px solid var(--violet);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(73,38,127,0.14); }
+  .kpi-card.red   { border-left-color: var(--tomato); }
+  .kpi-card.green { border-left-color: var(--green); }
+  .kpi-card.blue  { border-left-color: var(--steel-dark); }
+
+  .kpi-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  .kpi-num { font-size: 2.2rem; font-weight: 800; line-height: 1; color: var(--violet); }
+  .kpi-card.red   .kpi-num { color: var(--tomato); }
+  .kpi-card.green .kpi-num { color: var(--green); }
+  .kpi-card.blue  .kpi-num { color: #3B6CB7; }
+  .kpi-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 700; }
+  .kpi-icon { font-size: 1.8rem; opacity: 0.12; }
+  .kpi-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
+
+  /* ── CHART CARDS ── */
+  .chart-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 14px rgba(73,38,127,0.06);
+  }
+  .chart-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--violet);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .chart-title-left { display: flex; align-items: center; gap: 0.6rem; }
+  .chart-title-left::before { content:''; display:inline-block; width:4px; height:18px; background:var(--tomato); border-radius:3px; flex-shrink:0; }
+  .badge { background: var(--violet-pale); color: var(--violet); font-size: 0.67rem; font-weight: 700; border-radius: 999px; padding: 0.15rem 0.65rem; }
+  .mini-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.5rem; }
+
+  .kpi-meta-card { background:#fff; border-radius:14px; padding:1rem 1.1rem 0.8rem; box-shadow:0 2px 10px rgba(73,38,127,0.06); border-left:5px solid var(--violet); transition:transform .15s; }
+  .kpi-meta-card:hover { transform: translateY(-3px); }
+  .kpi-meta-label { font-size:0.66rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); font-weight:700; margin-bottom:0.35rem; }
+  .kpi-meta-row { display:flex; align-items:baseline; gap:0.4rem; }
+  .kpi-meta-num { font-size:1.65rem; font-weight:800; line-height:1; }
+  .kpi-meta-dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; margin-left:auto; box-shadow: 0 0 0 3px rgba(0,0,0,0.04); }
+  .kpi-meta-target { font-size:0.65rem; color:var(--muted); margin-top:0.2rem; }
+
+  /* Vista Gerencial: oculta secciones operativas/granulares para una presentación limpia */
+  body.modo-gerencial .detalle-operativo { display: none !important; }
+  .chart-scroll { overflow-x: auto; }
+
+  /* ── FILTER PANEL ── */
+  .filter-panel {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 2px 14px rgba(73,38,127,0.06);
+    border-top: 4px solid var(--violet);
+  }
+  .filter-label { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.3rem; }
+  .filter-select {
+    width: 100%; padding: 0.45rem 2rem 0.45rem 0.75rem;
+    border: 1.5px solid var(--steel);
+    border-radius: 8px; font-size: 0.78rem;
+    font-family: 'Sora', sans-serif;
+    color: var(--text); background: white; outline: none;
+    cursor: pointer; transition: border-color 0.2s;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2349267F' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+  }
+  .filter-select:focus { border-color: var(--violet); }
+  .filter-select.active { border-color: var(--violet); background-color: var(--violet-pale); color: var(--violet); font-weight: 600; }
+
+  /* ── ASSIGNEE PILLS ── */
+  .assignee-pills { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .assignee-pill {
+    padding: 0.7rem 1.1rem;
+    border-radius: 14px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+    background: #F1F2F7;
+    color: var(--text);
+    text-align: center;
+    min-width: 108px;
+  }
+  .assignee-pill:hover { transform: translateY(-2px); }
+  .assignee-pill .pill-icon { display: block; font-size: 1.25rem; margin-bottom: 0.3rem; }
+  .assignee-pill .pill-count { display: block; font-size: 0.65rem; font-weight: 600; opacity: 0.75; margin-top: 0.15rem; }
+  .assignee-pill.all    { background: #F1F2F7; color: var(--text); }
+  .assignee-pill.active.all    { background: var(--violet); color: white; box-shadow: 0 4px 14px rgba(73,38,127,0.3); }
+
+  /* ── LOADING SPINNER ── */
+  .spinner-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; gap: 1rem;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid var(--steel);
+    border-top-color: var(--violet);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ESTADO INICIAL ── */
+  #dashboard-content { display: none; }
+
+  /* ── ACTIVE FILTER TAGS ── */
+  .filter-tag {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: var(--violet); color: white;
+    border-radius: 999px; font-size: 0.67rem; font-weight: 600;
+    padding: 0.2rem 0.65rem; cursor: pointer;
+  }
+  .filter-tag:hover { background: var(--tomato); }
+
+  /* ── LAST UPDATE ── */
+  .last-update { font-size: 0.68rem; color: rgba(255,255,255,0.55); font-family: 'JetBrains Mono', monospace; }
+
+  @media (max-width: 640px) {
+    .kpi-num { font-size: 1.65rem; }
+    .kpi-card { padding: 1rem 1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SPINNER -->
+<div id="spinner" class="spinner-overlay" style="display:none;">
+  <div class="spinner"></div>
+  <div style="color:var(--violet); font-weight:700; font-size:0.85rem;">Procesando Excel…</div>
+</div>
+
+<!-- HEADER -->
+<header class="site-header px-4 sm:px-8 py-4">
+  <div class="max-w-screen-2xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <div>
+      <div style="color:rgba(255,255,255,0.45); font-size:0.65rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">
+        CRESIO CIA. LTDA. · DEPTO. COMPRAS
+      </div>
+      <h1 style="color:white; font-size:1.6rem; font-weight:800; line-height:1.2; display:flex; align-items:center; gap:0.5rem;">
+        <span style="font-size:1.9rem;">🎫</span>
+        Dashboard de <span style="color:#FF3B1F;">Tickets</span> de Soporte
+      </h1>
+      <div id="header-subtitle" style="color:rgba(255,255,255,0.75); font-size:0.78rem; margin-top:0.35rem;"></div>
+    </div>
+    <div class="text-right flex flex-col items-end gap-1">
+      <div id="last-update" class="last-update">Sin datos cargados</div>
+      <div id="total-badge" style="display:none; font-size:0.72rem; background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.8); border-radius:999px; padding:0.2rem 0.8rem; font-weight:600;"></div>
+      <div style="display:flex; gap:0.4rem; margin-top:0.2rem;">
+        <button id="btn-vista-gerencial" onclick="setVista('gerencial')" style="font-size:0.68rem; font-weight:700; padding:0.3rem 0.7rem; border-radius:999px; border:1px solid rgba(255,255,255,0.35); background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.85); cursor:pointer;">👔 Vista Gerencial</button>
+        <button id="btn-vista-completa" onclick="setVista('completa')" style="font-size:0.68rem; font-weight:700; padding:0.3rem 0.7rem; border-radius:999px; border:1px solid rgba(255,255,255,0.35); background:white; color:var(--violet); cursor:pointer;">📊 Vista Completa</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-screen-2xl mx-auto px-4 sm:px-8 py-6 space-y-5">
+
+  <!-- UPLOAD SECTION -->
+  <div id="upload-section">
+    <!-- Estado inicial: zona de carga grande -->
+    <div id="upload-initial" class="upload-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+      <div style="font-size:2.5rem; margin-bottom:0.75rem;">📊</div>
+      <div style="font-size:1rem; font-weight:700; color:var(--violet); margin-bottom:0.35rem;">Cargar archivo Excel</div>
+      <div style="font-size:0.78rem; color:var(--muted); margin-bottom:1rem;">Arrastra aquí <strong>Tickets_creados.xlsx</strong> o haz clic para seleccionar</div>
+      <div style="display:inline-flex; align-items:center; gap:0.5rem; background:var(--violet); color:white; border-radius:8px; padding:0.55rem 1.4rem; font-size:0.8rem; font-weight:700;">
+        📂 Seleccionar archivo
+      </div>
+      <div style="font-size:0.68rem; color:var(--muted); margin-top:1rem; font-family:'JetBrains Mono',monospace;">
+        Compatible: .xlsx · .xls · Funciona sin internet una vez cargado
+      </div>
+    </div>
+
+    <!-- Estado cargado: barra compacta -->
+    <div id="upload-loaded" class="upload-bar" style="display:none;">
+      <div style="font-size:1.3rem;">📊</div>
+      <div class="file-badge" id="file-name-badge">–</div>
+      <div style="font-size:0.73rem; color:var(--muted); flex:1;">
+        <span id="file-row-count" style="font-weight:700; color:var(--violet);">–</span> registros cargados
+      </div>
+      <button class="btn-load" onclick="document.getElementById('file-input-reload').click()">
+        🔄 Actualizar Excel
+      </button>
+      <input type="file" id="file-input-reload" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])">
+    </div>
+  </div>
+
+  <!-- DASHBOARD (oculto hasta cargar datos) -->
+  <div id="dashboard-content">
+
+    <!-- ASSIGNEE QUICK FILTER (estilo pestañas) -->
+    <div class="chart-card" style="padding: 1.2rem 1.5rem;">
+      <div class="assignee-pills" id="assignee-pills-container">
+        <span class="assignee-pill all active" data-assignee="all" onclick="setAssigneePill(this)">
+          <span class="pill-icon">🏢</span>Vista General<span class="pill-count" id="cnt-pill-all"></span>
+        </span>
+        <!-- Los pills de cada asignado se generan dinámicamente al cargar el Excel -->
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <section class="filter-panel">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <span style="font-size:0.8rem; font-weight:700; color:var(--violet);">🔍 Filtros adicionales</span>
+        <button class="btn-reset-filters" onclick="resetFilters()">↺ Limpiar todos</button>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div>
+          <div class="filter-label">Año</div>
+          <select id="f-anio" class="filter-select" onchange="markActive(this); applyFilters()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div>
+          <div class="filter-label">Mes</div>
+          <select id="f-mes" class="filter-select" onchange="markActive(this); applyFilters()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div>
+          <div class="filter-label">Sucursal</div>
+          <select id="f-cliente" class="filter-select" onchange="markActive(this); applyFilters()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="detalle-operativo">
+          <div class="filter-label">Etapa</div>
+          <select id="f-etapa" class="filter-select" onchange="markActive(this); applyFilters()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="detalle-operativo">
+          <div class="filter-label">Etiqueta</div>
+          <select id="f-etiqueta" class="filter-select" onchange="markActive(this); applyFilters()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+      </div>
+      <div id="active-filter-tags" class="flex flex-wrap gap-1 mt-3"></div>
+    </section>
+
+    <!-- KPIs -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-num mono" id="kpi-total">–</div>
+          <div class="kpi-icon">🎫</div>
+        </div>
+        <div class="kpi-label">Total de Tickets</div>
+        <div class="kpi-sub" id="kpi-total-sub"></div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-top">
+          <div class="kpi-num mono" id="kpi-resueltos">–</div>
+          <div class="kpi-icon">✅</div>
+        </div>
+        <div class="kpi-label">Resueltos</div>
+        <div class="kpi-sub" id="kpi-resueltos-sub"></div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-top">
+          <div class="kpi-num mono" id="kpi-pendientes">–</div>
+          <div class="kpi-icon">🆕</div>
+        </div>
+        <div class="kpi-label">Pendientes (Nuevo)</div>
+        <div class="kpi-sub" id="kpi-pendientes-sub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-num mono" id="kpi-cancelados">–</div>
+          <div class="kpi-icon">🚫</div>
+        </div>
+        <div class="kpi-label">Cancelados</div>
+        <div class="kpi-sub" id="kpi-cancelados-sub"></div>
+      </div>
+      <div class="kpi-card blue detalle-operativo">
+        <div class="kpi-top">
+          <div class="kpi-num mono" id="kpi-ans">–</div>
+          <div class="kpi-icon">📊</div>
+        </div>
+        <div class="kpi-label">% Cumplimiento ANS</div>
+        <div class="kpi-sub" id="kpi-ans-sub"></div>
+      </div>
+      <div class="kpi-card blue detalle-operativo">
+        <div class="kpi-top">
+          <div class="kpi-num mono" id="kpi-tiempo">–</div>
+          <div class="kpi-icon">⏱️</div>
+        </div>
+        <div class="kpi-label">Prom. Horas Solución</div>
+        <div class="kpi-sub" id="kpi-tiempo-sub"></div>
+      </div>
+      <div class="kpi-card detalle-operativo">
+        <div class="kpi-top">
+          <div class="kpi-num mono" id="kpi-tiempo-asig">–</div>
+          <div class="kpi-icon">🕐</div>
+        </div>
+        <div class="kpi-label">Prom. Horas 1ra Asignación</div>
+        <div class="kpi-sub" id="kpi-tiempo-asig-sub"></div>
+      </div>
+    </section>
+
+    <!-- ROW: Indicadores con meta (semáforo + tendencia semanal) -->
+    <section>
+      <div style="font-size:0.8rem; font-weight:700; color:var(--violet); margin-bottom:0.7rem;">🚦 Indicadores con Meta</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="kpi-meta-card" id="card-meta-ans">
+          <div class="kpi-meta-label">% Cumplimiento ANS</div>
+          <div class="kpi-meta-row">
+            <div class="kpi-meta-num mono" id="kpi-meta-ans">–</div>
+            <div class="kpi-meta-dot" id="dot-meta-ans"></div>
+          </div>
+          <div class="kpi-meta-target">Meta: ≥ 90%</div>
+          <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-ans"></canvas></div>
+        </div>
+        <div class="kpi-meta-card" id="card-meta-horassol">
+          <div class="kpi-meta-label">Prom. Horas Solución</div>
+          <div class="kpi-meta-row">
+            <div class="kpi-meta-num mono" id="kpi-meta-horassol">–</div>
+            <div class="kpi-meta-dot" id="dot-meta-horassol"></div>
+          </div>
+          <div class="kpi-meta-target">Meta: ≤ 24h</div>
+          <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-horassol"></canvas></div>
+        </div>
+        <div class="kpi-meta-card" id="card-meta-horas1ra">
+          <div class="kpi-meta-label">Prom. Horas 1ra Asignación</div>
+          <div class="kpi-meta-row">
+            <div class="kpi-meta-num mono" id="kpi-meta-horas1ra">–</div>
+            <div class="kpi-meta-dot" id="dot-meta-horas1ra"></div>
+          </div>
+          <div class="kpi-meta-target">Meta: ≤ 4h</div>
+          <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-horas1ra"></canvas></div>
+        </div>
+        <div class="kpi-meta-card" id="card-meta-pendientes">
+          <div class="kpi-meta-label">% Pendientes (Nuevo)</div>
+          <div class="kpi-meta-row">
+            <div class="kpi-meta-num mono" id="kpi-meta-pendientes">–</div>
+            <div class="kpi-meta-dot" id="dot-meta-pendientes"></div>
+          </div>
+          <div class="kpi-meta-target">Meta: ≤ 5%</div>
+          <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-pendientes"></canvas></div>
+        </div>
+        <div class="kpi-meta-card" id="card-meta-cancelados">
+          <div class="kpi-meta-label">% Cancelados</div>
+          <div class="kpi-meta-row">
+            <div class="kpi-meta-num mono" id="kpi-meta-cancelados">–</div>
+            <div class="kpi-meta-dot" id="dot-meta-cancelados"></div>
+          </div>
+          <div class="kpi-meta-target">Meta: ≤ 3%</div>
+          <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-cancelados"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROW: Tickets por día del último mes con datos, por resultado (4 mini-gráficos) -->
+    <div class="chart-card detalle-operativo">
+      <div class="chart-title">
+        <span class="chart-title-left" id="titulo-dia-etapa">Tickets por Día</span>
+        <span class="badge" id="cnt-dia-etapa"></span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <div class="mini-title">✅ Resueltos</div>
+          <div style="height:200px"><canvas id="chart-dia-resuelto"></canvas></div>
+        </div>
+        <div>
+          <div class="mini-title">🆕 Nuevos (Pendientes)</div>
+          <div style="height:200px"><canvas id="chart-dia-nuevo"></canvas></div>
+        </div>
+        <div>
+          <div class="mini-title">🚫 Cancelados</div>
+          <div style="height:200px"><canvas id="chart-dia-cancelado"></canvas></div>
+        </div>
+        <div>
+          <div class="mini-title">🔧 En Progreso</div>
+          <div style="height:200px"><canvas id="chart-dia-progreso"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW: Mes -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-left">Tickets por Mes</span>
+        <span class="badge" id="cnt-mes"></span>
+      </div>
+      <div style="height:260px"><canvas id="chart-mes"></canvas></div>
+      <div style="margin-top:0.6rem; font-size:0.72rem; color:var(--muted); font-style:italic;" id="nota-mes-total"></div>
+    </div>
+
+    <!-- ROW: Asignados (barras side by side) -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-left">Distribución por Técnico Asignado</span>
+        <span class="badge" id="cnt-asignado"></span>
+      </div>
+      <div style="height:220px"><canvas id="chart-asignado"></canvas></div>
+    </div>
+
+    <!-- ROW: Tickets por Mes, desglosado por resultado (4 mini-gráficos, cada uno con su propia escala) -->
+    <div class="chart-card detalle-operativo">
+      <div class="chart-title">
+        <span class="chart-title-left">Tickets por Mes — por Resultado</span>
+        <span class="badge" id="cnt-mes-tecnico"></span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <div class="mini-title">✅ Resueltos</div>
+          <div style="height:200px"><canvas id="chart-mes-resuelto"></canvas></div>
+        </div>
+        <div>
+          <div class="mini-title">🆕 Nuevos (Pendientes)</div>
+          <div style="height:200px"><canvas id="chart-mes-nuevo"></canvas></div>
+        </div>
+        <div>
+          <div class="mini-title">🚫 Cancelados</div>
+          <div style="height:200px"><canvas id="chart-mes-cancelado"></canvas></div>
+        </div>
+        <div>
+          <div class="mini-title">🔧 En Progreso</div>
+          <div style="height:200px"><canvas id="chart-mes-progreso"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW: Desempeño por Responsable -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-left">Desempeño por Responsable</span>
+      </div>
+      <div class="chart-scroll">
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; min-width:680px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Responsable</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Total</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Resuelto</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Nuevo</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Cancelada</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">En Progreso</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">% ANS</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Prom. horas solución</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-desempeno-responsable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROW: Top Sucursales (scrollable) -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-left">Top 10 Sucursales por Tickets</span>
+        <span class="badge" id="cnt-cliente"></span>
+      </div>
+      <div class="chart-scroll">
+        <div style="min-width:400px; height:300px"><canvas id="chart-cliente"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ROW: Sucursal con más tickets por mes -->
+    <div class="chart-card detalle-operativo">
+      <div class="chart-title">
+        <span class="chart-title-left">Sucursal con Más Tickets por Mes</span>
+      </div>
+      <div class="chart-scroll">
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; min-width:420px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Mes</th>
+              <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Sucursal con más tickets</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Tickets</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-cliente-mes"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROW: Motivo -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-left">Top 10 Motivos</span>
+      </div>
+      <div style="height:240px"><canvas id="chart-motivo"></canvas></div>
+    </div>
+
+    <!-- ROW: Motivo (detalle completo) -->
+    <div class="chart-card detalle-operativo">
+      <div class="chart-title">
+        <span class="chart-title-left">Motivo — Detalle Completo</span>
+        <span class="badge" id="cnt-motivo-full"></span>
+      </div>
+      <div class="chart-scroll" style="max-height:340px; overflow-y:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; min-width:400px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; position:sticky; top:0; background:#fff;">Motivo</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; position:sticky; top:0; background:#fff;">Tickets</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-motivo-full"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROW: Etiquetas (detalle completo) -->
+    <div class="chart-card detalle-operativo">
+      <div class="chart-title">
+        <span class="chart-title-left">Etiquetas — Detalle Completo</span>
+        <span class="badge" id="cnt-etiqueta-full"></span>
+      </div>
+      <div class="chart-scroll" style="max-height:340px; overflow-y:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; min-width:400px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; position:sticky; top:0; background:#fff;">Etiqueta</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; position:sticky; top:0; background:#fff;">Tickets</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-etiqueta-full"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROW: Resumen por Etapa + Departamento + Equipo Mesa de Ayuda -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 detalle-operativo">
+      <div class="chart-card">
+        <div class="chart-title">
+          <span class="chart-title-left">Resumen por Etapa</span>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Etapa</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Tickets</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-resumen-etapa"></tbody>
+        </table>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">
+          <span class="chart-title-left">Tickets por Departamento</span>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Departamento</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Tickets</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-departamento"></tbody>
+        </table>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">
+          <span class="chart-title-left">Tickets por Equipo Mesa de Ayuda</span>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Equipo</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Tickets</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-equipo-mesa"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /dashboard-content -->
+</main>
+
+<footer style="text-align:center; font-size:0.68rem; color:var(--muted); padding:1.5rem 1rem 2rem;">
+  FARMAMIA · Dashboard de Soporte Técnico · Actualizable con cualquier versión del Excel exportado
+</footer>
+
+<script>
+// =============================================
+// CONSTANTES
+// =============================================
+// Colores asignados dinámicamente a cada técnico según aparece en el Excel
+let ASSIGNEE_COLORS = {};
+
+const COLORS = {
+  violet:     '#49267F',
+  violetMid:  '#6B3DAA',
+  violetLight:'#9B6FD1',
+  tomato:     '#FF3B1F',
+  tomatoMid:  '#FF6B52',
+  steel:      '#D9E0E8',
+  blue:       '#3B6CB7',
+  green:      '#0FA870',
+  amber:      '#F59E0B',
+  pink:       '#C8316D',
+};
+
+const PALETTE = [
+  '#49267F','#FF3B1F','#6B3DAA','#FF6B52',
+  '#9B6FD1','#3B6CB7','#0FA870','#F59E0B',
+  '#C8316D','#B0BEC9','#2A1060','#C8280C',
+];
+
+// Paleta para técnicos: colores ordenados para maximizar contraste entre
+// personas consecutivas (evita tener 2-3 tonos de violeta seguidos).
+const TECH_PALETTE = [
+  '#6B3DAA', '#FF3B1F', '#0FA870', '#3B6CB7',
+  '#F59E0B', '#C8316D', '#2A1060', '#9B6FD1',
+  '#49267F', '#FF6B52', '#C8280C', '#B0BEC9',
+];
+const SIN_ASIGNAR = '(Sin asignar)';
+const COLOR_SIN_ASIGNAR = '#9CA3AF'; // gris neutro, nunca se reparte a un técnico real
+
+// =============================================
+// ESTADO GLOBAL
+// =============================================
+let ALL_ROWS = [];
+let FILTER_STATE = { anio:'', mes:'', cliente:'', etapa:'', etiqueta:'', asignado:'' };
+let CHARTS = {};
+
+// =============================================
+// DRAG & DROP
+// =============================================
+(function initDragDrop() {
+  const zone = document.getElementById('upload-initial');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+})();
+
+// =============================================
+// PARSEO DEL EXCEL
+// =============================================
+function handleFile(file) {
+  if (!file) return;
+  const validExts = ['.xlsx', '.xls'];
+  const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+  if (!validExts.includes(ext)) {
+    alert('Por favor selecciona un archivo Excel (.xlsx o .xls)');
+    return;
+  }
+
+  showSpinner(true);
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Encontrar fila de encabezados dinámicamente
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(jsonData.length, 25); i++) {
+        const row = jsonData[i];
+        if (row.some(c => String(c).trim() === '# REF')) {
+          headerIdx = i;
+          break;
+        }
+      }
+      if (headerIdx === -1) {
+        alert('No se encontró la fila de encabezados en el archivo. Verifica que sea el Excel correcto.');
+        showSpinner(false);
+        return;
+      }
+
+      const headers = jsonData[headerIdx].map(h => String(h).trim());
+      const rows = [];
+      for (let i = headerIdx + 1; i < jsonData.length; i++) {
+        const rowArr = jsonData[i];
+        if (!rowArr || rowArr.every(c => c === '' || c === null || c === undefined)) continue;
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = rowArr[idx] ?? ''; });
+        rows.push(obj);
+      }
+
+      // Parsear y normalizar
+      // Alias de encabezados: por si el Excel exportado usa un nombre ligeramente
+      // distinto al esperado (distintas exportaciones del sistema de tickets
+      // usan nombres de columna algo diferentes entre sí).
+      const FIELD_ALIASES = {
+        ref:                ['# REF'],
+        mes:                ['MES'],
+        departamento:       ['DEPARTAMENTO'],
+        equipoMesaAyuda:    ['EQUIPO MESA DE AYUDA'],
+        asunto:             ['ASUNTO'],
+        motivo:             ['MOTIVO'],
+        etiqueta:           ['ETIQUETAS', 'ETIQUETA'],
+        cliente:            ['SUCURSAL', 'CLIENTE'],
+        asignado:           ['ASIGNADO A', 'ASIGNADO', 'ASIGNADA A'],
+        fecha:              ['FECHA', 'CREADO (FECHA)', 'FECHA CREADO', 'CREADO EL'],
+        etapa:              ['ETAPA TICKET', 'ETAPA'],
+        tiempoSolucion:     ['HORAS SOLUCION', 'TIEMPO DE SOLUCION (HORAS)'],
+        tiempoAbierto:      ['TIEMPO ABIERTO'],
+        horas1raAsignacion: ['HORAS 1RA ASIGNACION'],
+        cumpleAns:          ['CUMPLE ANS'],
+      };
+      const getField = (row, key) => {
+        for (const alias of FIELD_ALIASES[key]) {
+          if (row[alias] !== undefined && row[alias] !== '') return row[alias];
+        }
+        return '';
+      };
+
+      ALL_ROWS = rows.map(r => ({
+        ref:                String(getField(r, 'ref') || ''),
+        mes:                String(getField(r, 'mes') || '').trim(),
+        departamento:       String(getField(r, 'departamento') || '').trim(),
+        equipoMesaAyuda:    String(getField(r, 'equipoMesaAyuda') || '').trim(),
+        asunto:             String(getField(r, 'asunto') || '').trim(),
+        motivo:             String(getField(r, 'motivo') || '').trim(),
+        etiqueta:           String(getField(r, 'etiqueta') || 'Sin etiqueta').trim(),
+        cliente:            String(getField(r, 'cliente') || '').trim(),
+        asignado:           String(getField(r, 'asignado') || '').trim(),
+        fecha:              parseFecha(getField(r, 'fecha')),
+        anio:               parseFecha(getField(r, 'fecha')).slice(0,4) || '',
+        etapa:              String(getField(r, 'etapa') || '').trim(),
+        tiempoSolucion:     parseFloat(getField(r, 'tiempoSolucion')) || 0,
+        tiempoAbierto:      parseFloat(getField(r, 'tiempoAbierto')) || 0,
+        horas1raAsignacion: parseFloat(getField(r, 'horas1raAsignacion')) || 0,
+        cumpleAns:          String(getField(r, 'cumpleAns') || '').trim(),
+      })).filter(r => r.ref !== '' && r.ref !== '# REF');
+
+      // Generar los pills de técnico dinámicamente según lo que traiga el Excel
+      buildAssigneePills(ALL_ROWS);
+
+      // Cargar filtros con los datos frescos
+      buildFilterOptions();
+      resetFilters(true);
+
+      // Mostrar UI cargada
+      document.getElementById('upload-initial').style.display = 'none';
+      document.getElementById('upload-loaded').style.display = 'flex';
+      document.getElementById('file-name-badge').textContent = '📄 ' + file.name;
+      document.getElementById('file-row-count').textContent = ALL_ROWS.length.toLocaleString();
+      document.getElementById('dashboard-content').style.display = 'block';
+
+      const now = new Date();
+      document.getElementById('last-update').textContent =
+        'Actualizado: ' + now.toLocaleDateString('es-EC') + ' ' + now.toLocaleTimeString('es-EC', {hour:'2-digit',minute:'2-digit'});
+
+      // Subtítulo del header: rango de fechas real del Excel cargado
+      const fechasOrdenadas = ALL_ROWS.map(r => r.fecha).filter(Boolean).sort();
+      if (fechasOrdenadas.length) {
+        const MES_NOMBRES_SUB = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const fmt = f => { const [y,m] = f.split('-'); return `${MES_NOMBRES_SUB[parseInt(m,10)-1]} ${y}`; };
+        const desde = fmt(fechasOrdenadas[0]);
+        const hasta = fmt(fechasOrdenadas[fechasOrdenadas.length-1]);
+        document.getElementById('header-subtitle').textContent =
+          `Depto. Compras · ${desde === hasta ? desde : desde + ' – ' + hasta} · Datos actualizados a ${hasta}`;
+      }
+
+      showSpinner(false);
+    } catch (err) {
+      showSpinner(false);
+      console.error(err);
+      alert('Error al leer el archivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseFecha(val) {
+  if (!val && val !== 0) return '';
+  // SheetJS con cellDates:true devuelve Date objects
+  if (val instanceof Date) {
+    const y = val.getFullYear(), m = val.getMonth()+1, d = val.getDate();
+    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  const s = String(val).trim();
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  // DD/MM/YYYY (formato usado en el Excel; si en algún momento llega en MM/DD/YYYY
+  // habría que distinguirlo por otra vía, ya que ambos formatos usan la misma máscara)
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmy) return `${dmy[3]}-${String(dmy[2]).padStart(2,'0')}-${String(dmy[1]).padStart(2,'0')}`;
+  // Número serial de Excel (entero o float)
+  const n = parseFloat(s);
+  if (!isNaN(n) && n > 10000) {
+    try {
+      const d = XLSX.SSF.parse_date_code(n);
+      return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+    } catch(e) { return ''; }
+  }
+  return '';
+}
+
+// =============================================
+// OPCIONES DE FILTROS (dinámicas)
+// =============================================
+function buildFilterOptions() {
+  const MES_ORDER = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const meses = MES_ORDER.filter(m => ALL_ROWS.some(r => r.mes === m));
+  const anios = [...new Set(ALL_ROWS.map(r => r.anio).filter(Boolean))].sort().reverse();
+  const clientes = unique(ALL_ROWS, 'cliente').sort();
+  const etapas = unique(ALL_ROWS, 'etapa').sort();
+  const etiquetas = unique(ALL_ROWS, 'etiqueta').sort();
+
+  fillSelect('f-anio', anios);
+  fillSelect('f-mes', meses);
+  fillSelect('f-cliente', clientes);
+  fillSelect('f-etapa', etapas);
+  fillSelect('f-etiqueta', etiquetas);
+}
+
+function unique(rows, key) {
+  return [...new Set(rows.map(r => r[key]).filter(Boolean))];
+}
+
+function fillSelect(id, opts) {
+  const sel = document.getElementById(id);
+  while (sel.options.length > 1) sel.remove(1);
+  opts.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  });
+}
+
+// =============================================
+// FILTROS
+// =============================================
+function markActive(sel) {
+  sel.classList.toggle('active', sel.value !== '');
+}
+
+function getFilteredRows() {
+  // ALL_ROWS contiene todos los tickets del Excel (ya no se filtra por técnico en la ingesta)
+  const fs = FILTER_STATE;
+  return ALL_ROWS.filter(r => {
+    if (fs.asignado) {
+      const esSinAsignar = fs.asignado === SIN_ASIGNAR;
+      if (esSinAsignar ? r.asignado !== '' : r.asignado !== fs.asignado) return false;
+    }
+    if (fs.anio && r.anio !== fs.anio) return false;
+    if (fs.mes && r.mes !== fs.mes) return false;
+    if (fs.cliente && r.cliente !== fs.cliente) return false;
+    if (fs.etapa && r.etapa !== fs.etapa) return false;
+    if (fs.etiqueta && r.etiqueta !== fs.etiqueta) return false;
+    return true;
+  });
+}
+
+function applyFilters() {
+  FILTER_STATE.anio      = document.getElementById('f-anio').value;
+  FILTER_STATE.mes       = document.getElementById('f-mes').value;
+  FILTER_STATE.cliente   = document.getElementById('f-cliente').value;
+  FILTER_STATE.etapa     = document.getElementById('f-etapa').value;
+  FILTER_STATE.etiqueta  = document.getElementById('f-etiqueta').value;
+
+  const rows = getFilteredRows();
+  updateKPIs(rows);
+  updateIndicadoresMeta(rows);
+  updateAllCharts(rows);
+  renderFilterTags();
+
+  const totalGeneral = ALL_ROWS.length; // total de tickets cargados del Excel
+  const badge = document.getElementById('total-badge');
+  badge.style.display = 'inline-block';
+  badge.textContent = rows.length < totalGeneral
+    ? `${rows.length.toLocaleString()} / ${totalGeneral.toLocaleString()} tickets`
+    : `${totalGeneral.toLocaleString()} tickets`;
+}
+
+function buildAssigneePills(rows) {
+  const container = document.getElementById('assignee-pills-container');
+  // Quitar pills anteriores (deja solo el de "Todo el equipo")
+  container.querySelectorAll('.assignee-pill:not(.all)').forEach(p => p.remove());
+
+  const counts = {};
+  let sinAsignar = 0;
+  rows.forEach(r => {
+    if (r.asignado) counts[r.asignado] = (counts[r.asignado] || 0) + 1;
+    else sinAsignar++;
+  });
+  const asignados = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+
+  ASSIGNEE_COLORS = {};
+  asignados.forEach((nombre, i) => {
+    ASSIGNEE_COLORS[nombre] = TECH_PALETTE[i % TECH_PALETTE.length];
+  });
+  ASSIGNEE_COLORS[SIN_ASIGNAR] = COLOR_SIN_ASIGNAR;
+
+  const addPill = (nombre, label, count, color) => {
+    const pill = document.createElement('span');
+    pill.className = 'assignee-pill';
+    pill.dataset.assignee = nombre;
+    pill.dataset.color = color;
+    applyPillStyle(pill, false);
+    pill.onclick = () => setAssigneePill(pill);
+    pill.innerHTML = `<span class="pill-icon">👤</span>${label}<span class="pill-count">${count.toLocaleString()} tickets</span>`;
+    container.appendChild(pill);
+  };
+
+  asignados.forEach(nombre => addPill(nombre, prettyName(nombre), counts[nombre], ASSIGNEE_COLORS[nombre]));
+  if (sinAsignar > 0) addPill(SIN_ASIGNAR, SIN_ASIGNAR, sinAsignar, COLOR_SIN_ASIGNAR);
+
+  document.getElementById('cnt-pill-all').textContent = `${rows.length.toLocaleString()} tickets`;
+
+  // Reset visual: "Todo el equipo" queda activo
+  container.querySelectorAll('.assignee-pill').forEach(p => p.classList.remove('active'));
+  container.querySelector('.assignee-pill.all').classList.add('active');
+}
+
+// Convierte "APELLIDO1 APELLIDO2 NOMBRE1 NOMBRE2" (u otros formatos) en algo legible.
+// No asume una cantidad fija de palabras, así que nunca produce "undefined".
+function prettyName(fullName) {
+  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  const titleCase = s => s.charAt(0) + s.slice(1).toLowerCase();
+  if (parts.length === 4) {
+    // Convención más común en el Excel: Apellido1 Apellido2 Nombre1 Nombre2
+    return `${titleCase(parts[2])} ${titleCase(parts[0])}`;
+  }
+  return parts.map(titleCase).join(' ');
+}
+
+function applyPillStyle(pill, active) {
+  const color = pill.dataset.color;
+  if (!color) return; // el pill "all" usa las clases CSS fijas
+  pill.style.background = active ? color : color + '22';
+  pill.style.color = active ? '#fff' : color;
+}
+
+function setAssigneePill(el) {
+  document.querySelectorAll('.assignee-pill').forEach(p => {
+    p.classList.remove('active');
+    applyPillStyle(p, false);
+  });
+  el.classList.add('active');
+  applyPillStyle(el, true);
+  FILTER_STATE.asignado = el.dataset.assignee === 'all' ? '' : el.dataset.assignee;
+  applyFilters();
+}
+
+function resetFilters(silent) {
+  FILTER_STATE = { anio:'', mes:'', cliente:'', etapa:'', etiqueta:'', asignado:'' };
+  ['f-anio','f-mes','f-cliente','f-etapa','f-etiqueta'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+    el.classList.remove('active');
+  });
+  document.querySelectorAll('.assignee-pill').forEach(p => { p.classList.remove('active'); applyPillStyle(p, false); });
+  document.querySelector('.assignee-pill.all').classList.add('active');
+  if (!silent) applyFilters();
+}
+
+function renderFilterTags() {
+  const NAMES = { anio:'Año', mes:'Mes', cliente:'Sucursal', etapa:'Etapa', etiqueta:'Etiqueta', asignado:'Asignado' };
+  const container = document.getElementById('active-filter-tags');
+  container.innerHTML = '';
+  let any = false;
+  for (const [k, v] of Object.entries(FILTER_STATE)) {
+    if (v) {
+      any = true;
+      const tag = document.createElement('span');
+      tag.className = 'filter-tag';
+      const short = v.length > 24 ? v.slice(0,24)+'…' : v;
+      tag.innerHTML = `${NAMES[k]}: ${short} <span>✕</span>`;
+      tag.onclick = () => {
+        if (k === 'asignado') {
+          FILTER_STATE.asignado = '';
+          document.querySelectorAll('.assignee-pill').forEach(p => { p.classList.remove('active'); applyPillStyle(p, false); });
+          document.querySelector('.assignee-pill.all').classList.add('active');
+        } else {
+          FILTER_STATE[k] = '';
+          const elKey = k === 'anio' ? 'f-anio' : 'f-' + k;
+          const el = document.getElementById(elKey);
+          if (el) { el.value = ''; el.classList.remove('active'); }
+        }
+        applyFilters();
+      };
+      container.appendChild(tag);
+    }
+  }
+}
+
+// =============================================
+// INDICADORES CON META (semáforo + tendencia semanal)
+// =============================================
+const METAS = {
+  ans:       { tipo: 'min', bueno: 90, medio: 80 }, // % ANS: >=90 verde, 80-89.9 ámbar, <80 rojo
+  horasSol:  { tipo: 'max', bueno: 24, medio: 48 }, // horas solución: <=24 verde, 24-48 ámbar, >48 rojo
+  horas1ra:  { tipo: 'max', bueno: 4,  medio: 8  },
+  pctPend:   { tipo: 'max', bueno: 5,  medio: 10 },
+  pctCancel: { tipo: 'max', bueno: 3,  medio: 6  },
+};
+const SEMAFORO_COLOR = { green: COLORS.green, amber: COLORS.amber, red: COLORS.tomato, gray: '#9CA3AF' };
+const MES_ABBR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+function semaforoNivel(valor, cfg) {
+  if (valor === null || valor === undefined || isNaN(valor)) return 'gray';
+  if (cfg.tipo === 'min') {
+    if (valor >= cfg.bueno) return 'green';
+    if (valor >= cfg.medio) return 'amber';
+    return 'red';
+  }
+  if (valor <= cfg.bueno) return 'green';
+  if (valor <= cfg.medio) return 'amber';
+  return 'red';
+}
+
+function getWeekStart(fechaStr) {
+  // Devuelve el lunes ('YYYY-MM-DD') de la semana a la que pertenece fechaStr
+  const d = new Date(fechaStr + 'T00:00:00');
+  const dow = d.getDay(); // 0=domingo .. 6=sábado
+  const diff = (dow === 0 ? -6 : 1 - dow);
+  d.setDate(d.getDate() + diff);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function formatWeekLabel(weekStartStr) {
+  const [, m, d] = weekStartStr.split('-').map(Number);
+  return `${d} ${MES_ABBR[m-1]}`;
+}
+
+// Agrupa 'rows' por semana y aplica calcFn a cada grupo; devuelve las últimas nWeeks
+function computeWeeklySeries(rows, nWeeks, calcFn) {
+  const byWeek = {};
+  rows.forEach(r => {
+    if (!r.fecha) return;
+    const wk = getWeekStart(r.fecha);
+    (byWeek[wk] || (byWeek[wk] = [])).push(r);
+  });
+  const weekKeys = Object.keys(byWeek).sort().slice(-nWeeks);
+  return {
+    labels: weekKeys.map(formatWeekLabel),
+    values: weekKeys.map(wk => calcFn(byWeek[wk])),
+  };
+}
+
+function pintarKpiMeta(key, valor, cfg, formatFn) {
+  const nivel = semaforoNivel(valor, cfg);
+  const color = SEMAFORO_COLOR[nivel];
+  document.getElementById(`kpi-meta-${key}`).textContent = valor === null ? '–' : formatFn(valor);
+  document.getElementById(`kpi-meta-${key}`).style.color = color;
+  document.getElementById(`dot-meta-${key}`).style.background = color;
+  document.getElementById(`card-meta-${key}`).style.borderLeftColor = color;
+}
+
+function makeTrendChart(id, labels, values, metaValue) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (CHARTS[id]) CHARTS[id].destroy();
+  const metaLine = labels.map(() => metaValue);
+  CHARTS[id] = new Chart(ctx, {
+    type: 'line',
+    plugins: [ChartDataLabels],
+    data: {
+      labels,
+      datasets: [
+        {
+          data: values,
+          borderColor: COLORS.violet,
+          backgroundColor: 'rgba(73,38,127,0.08)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 2.5,
+          pointBackgroundColor: COLORS.violet,
+          borderWidth: 2,
+          spanGaps: true,
+        },
+        {
+          data: metaLine,
+          borderColor: '#B0BEC9',
+          borderDash: [4, 3],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+        tooltip: {
+          filter: item => item.datasetIndex === 0,
+          callbacks: { label: c => c.parsed.y === null ? ' sin datos' : ` ${c.parsed.y.toFixed(1)}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 8, family: "'Sora', sans-serif" }, color: '#9CA3AF', maxRotation: 0 } },
+        y: { display: false }
+      }
+    }
+  });
+}
+
+function updateIndicadoresMeta(rows) {
+  const NSEM = 8;
+  const total = rows.length;
+
+  // % Cumplimiento ANS
+  const ansRowsAll = rows.filter(r => r.cumpleAns === 'Sí' || r.cumpleAns === 'No');
+  const ansVal = ansRowsAll.length ? (ansRowsAll.filter(r => r.cumpleAns === 'Sí').length / ansRowsAll.length * 100) : null;
+  pintarKpiMeta('ans', ansVal, METAS.ans, v => v.toFixed(1) + '%');
+  const ansSer = computeWeeklySeries(rows, NSEM, wk => {
+    const a = wk.filter(r => r.cumpleAns === 'Sí' || r.cumpleAns === 'No');
+    return a.length ? a.filter(r => r.cumpleAns === 'Sí').length / a.length * 100 : null;
+  });
+  makeTrendChart('chart-trend-ans', ansSer.labels, ansSer.values, METAS.ans.bueno);
+
+  // Prom. Horas Solución
+  const horasArr = rows.map(r => r.tiempoSolucion).filter(v => v > 0);
+  const horasVal = horasArr.length ? horasArr.reduce((a,b)=>a+b,0) / horasArr.length : null;
+  pintarKpiMeta('horassol', horasVal, METAS.horasSol, v => v.toFixed(1) + 'h');
+  const horasSer = computeWeeklySeries(rows, NSEM, wk => {
+    const t = wk.map(r => r.tiempoSolucion).filter(v => v > 0);
+    return t.length ? t.reduce((a,b)=>a+b,0) / t.length : null;
+  });
+  makeTrendChart('chart-trend-horassol', horasSer.labels, horasSer.values, METAS.horasSol.bueno);
+
+  // Prom. Horas 1ra Asignación
+  const horas1Arr = rows.map(r => r.horas1raAsignacion).filter(v => v > 0);
+  const horas1Val = horas1Arr.length ? horas1Arr.reduce((a,b)=>a+b,0) / horas1Arr.length : null;
+  pintarKpiMeta('horas1ra', horas1Val, METAS.horas1ra, v => v.toFixed(1) + 'h');
+  const horas1Ser = computeWeeklySeries(rows, NSEM, wk => {
+    const t = wk.map(r => r.horas1raAsignacion).filter(v => v > 0);
+    return t.length ? t.reduce((a,b)=>a+b,0) / t.length : null;
+  });
+  makeTrendChart('chart-trend-horas1ra', horas1Ser.labels, horas1Ser.values, METAS.horas1ra.bueno);
+
+  // % Pendientes (Nuevo) sobre el total
+  const pendVal = total ? (rows.filter(r => r.etapa === 'Nuevo').length / total * 100) : null;
+  pintarKpiMeta('pendientes', pendVal, METAS.pctPend, v => v.toFixed(1) + '%');
+  const pendSer = computeWeeklySeries(rows, NSEM, wk => wk.length ? wk.filter(r => r.etapa === 'Nuevo').length / wk.length * 100 : null);
+  makeTrendChart('chart-trend-pendientes', pendSer.labels, pendSer.values, METAS.pctPend.bueno);
+
+  // % Cancelados sobre el total
+  const cancVal = total ? (rows.filter(r => r.etapa === 'Cancelada').length / total * 100) : null;
+  pintarKpiMeta('cancelados', cancVal, METAS.pctCancel, v => v.toFixed(1) + '%');
+  const cancSer = computeWeeklySeries(rows, NSEM, wk => wk.length ? wk.filter(r => r.etapa === 'Cancelada').length / wk.length * 100 : null);
+  makeTrendChart('chart-trend-cancelados', cancSer.labels, cancSer.values, METAS.pctCancel.bueno);
+}
+
+// =============================================
+// KPIs
+// =============================================
+function updateKPIs(rows) {
+  const total      = rows.length;
+  const resueltos  = rows.filter(r => r.etapa === 'Resuelto').length;
+  const pendientes = rows.filter(r => r.etapa === 'Nuevo').length;
+  const cancelados = rows.filter(r => r.etapa === 'Cancelada').length;
+
+  // % Cumplimiento ANS: Sí / (Sí + No), igual que el Excel (excluye N/A y vacíos)
+  const ansRows = rows.filter(r => r.cumpleAns === 'Sí' || r.cumpleAns === 'No');
+  const ansSi   = rows.filter(r => r.cumpleAns === 'Sí').length;
+  const ansPct  = ansRows.length ? (ansSi / ansRows.length * 100) : null;
+
+  const tiempos   = rows.map(r => r.tiempoSolucion).filter(v => v > 0);
+  const avgH      = tiempos.length ? (tiempos.reduce((a,b)=>a+b,0)/tiempos.length) : 0;
+  const tiemposA  = rows.map(r => r.horas1raAsignacion).filter(v => v > 0);
+  const avgHAsig  = tiemposA.length ? (tiemposA.reduce((a,b)=>a+b,0)/tiemposA.length) : 0;
+
+  const totalGeneral = ALL_ROWS.length; // total de tickets cargados del Excel
+
+  document.getElementById('kpi-total').textContent      = total.toLocaleString();
+  document.getElementById('kpi-resueltos').textContent  = resueltos.toLocaleString();
+  document.getElementById('kpi-pendientes').textContent = pendientes.toLocaleString();
+  document.getElementById('kpi-cancelados').textContent = cancelados.toLocaleString();
+  document.getElementById('kpi-ans').textContent        = ansPct === null ? '–' : ansPct.toFixed(1) + '%';
+  document.getElementById('kpi-tiempo').textContent     = avgH.toFixed(1);
+  document.getElementById('kpi-tiempo-asig').textContent = avgHAsig.toFixed(1);
+
+  document.getElementById('kpi-total-sub').textContent      = `de ${totalGeneral.toLocaleString()} tickets en total`;
+  document.getElementById('kpi-resueltos-sub').textContent  = total ? `${(resueltos/total*100).toFixed(1)}% del total filtrado` : '';
+  document.getElementById('kpi-pendientes-sub').textContent = total ? `${(pendientes/total*100).toFixed(1)}% del total filtrado` : '';
+  document.getElementById('kpi-cancelados-sub').textContent = total ? `${(cancelados/total*100).toFixed(1)}% del total filtrado` : '';
+  document.getElementById('kpi-ans-sub').textContent        = `Sobre ${ansRows.length.toLocaleString()} con política ANS`;
+  document.getElementById('kpi-tiempo-sub').textContent     = `Sobre ${tiempos.length.toLocaleString()} con tiempo registrado`;
+  document.getElementById('kpi-tiempo-asig-sub').textContent = `Sobre ${tiemposA.length.toLocaleString()} con tiempo registrado`;
+}
+
+// =============================================
+// CHARTS
+// =============================================
+function countBy(rows, key, order) {
+  const c = {};
+  rows.forEach(r => { const v = r[key]||'Sin def'; c[v]=(c[v]||0)+1; });
+  if (order) {
+    const res = {};
+    order.forEach(k => { if (c[k]!==undefined) res[k]=c[k]; });
+    Object.keys(c).forEach(k => { if (!res[k]) res[k]=c[k]; });
+    return res;
+  }
+  return c;
+}
+
+function sortedTop(rows, key, n) {
+  return Object.fromEntries(
+    Object.entries(countBy(rows, key))
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0, n)
+  );
+}
+
+function makeBar(id, labels, data, colors, opts) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (CHARTS[id]) CHARTS[id].destroy();
+  const isH = opts && opts.horizontal;
+
+  CHARTS[id] = new Chart(ctx, {
+    type: 'bar',
+    plugins: [ChartDataLabels],
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: labels.map((_,i) => colors[i % colors.length]),
+        borderRadius: 7,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: isH ? 'y' : 'x',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: c => ` ${c.parsed[isH?'x':'y'].toLocaleString()} tickets` }
+        },
+        datalabels: {
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+          color: ctx => {
+            const v = ctx.dataset.data[ctx.dataIndex];
+            const mx = Math.max(...ctx.dataset.data);
+            return (v / mx) > 0.18 ? '#ffffff' : COLORS.violet;
+          },
+          anchor: ctx => {
+            const v = ctx.dataset.data[ctx.dataIndex];
+            const mx = Math.max(...ctx.dataset.data);
+            return (v / mx) > 0.18 ? 'center' : 'end';
+          },
+          align: ctx => {
+            const v = ctx.dataset.data[ctx.dataIndex];
+            const mx = Math.max(...ctx.dataset.data);
+            return (v / mx) > 0.18 ? 'center' : 'end';
+          },
+          font: { size: 11, weight: '700', family: "'JetBrains Mono', monospace" },
+          formatter: v => v.toLocaleString(),
+          clamp: true,
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#F0F1F5', drawBorder: false },
+          ticks: { font: { size: 11, family: "'Sora', sans-serif" }, color: '#9CA3AF', maxRotation: isH ? 0 : 28 }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: '#F0F1F5', drawBorder: false },
+          ticks: { font: { size: 11, family: "'Sora', sans-serif" }, color: '#9CA3AF', precision: 0 }
+        }
+      }
+    }
+  });
+}
+
+function makeGroupedBar(id, labels, datasets) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (CHARTS[id]) CHARTS[id].destroy();
+  CHARTS[id] = new Chart(ctx, {
+    type: 'bar',
+    plugins: [ChartDataLabels],
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true, position: 'bottom',
+          labels: { font: { size: 10, family: "'Sora', sans-serif" }, boxWidth: 10, padding: 10 }
+        },
+        datalabels: {
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+          color: ctx => ctx.dataset.labelColor || COLORS.violet,
+          anchor: 'end',
+          align: 'end',
+          font: { size: 9, weight: '700', family: "'JetBrains Mono', monospace" },
+          formatter: v => v.toLocaleString(),
+        },
+        tooltip: {
+          mode: 'index',
+          callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toLocaleString()} tickets` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10, family: "'Sora', sans-serif" }, color: '#9CA3AF', maxRotation: 28 } },
+        y: { grid: { color: '#F0F1F5', drawBorder: false }, ticks: { font: { size: 10, family: "'Sora', sans-serif" }, color: '#9CA3AF', precision: 0 } }
+      }
+    }
+  });
+}
+
+function updateAllCharts(rows) {
+  const MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  // Mes: Total vs Resueltos (igual que la tabla "Tickets por mes" del Excel)
+  const mes = countBy(rows, 'mes', MES);
+  const mesLabelsAll = Object.keys(mes);
+  const resueltosPorMes = mesLabelsAll.map(m => rows.filter(r => r.mes === m && r.etapa === 'Resuelto').length);
+  makeGroupedBar('chart-mes', mesLabelsAll, [
+    { label: 'Total',     data: Object.values(mes), backgroundColor: COLORS.violetLight, labelColor: COLORS.violet, borderRadius: 4 },
+    { label: 'Resueltos', data: resueltosPorMes,    backgroundColor: COLORS.green,       labelColor: COLORS.green,  borderRadius: 4 },
+  ]);
+  document.getElementById('cnt-mes').textContent = Object.keys(mes).length + ' meses';
+
+  // Nota aclaratoria: la diferencia Total - Resueltos no "desaparece", son los
+  // tickets Nuevo/Cancelado/En progreso (visibles en "Tickets por Mes — por Resultado")
+  const totalMes = Object.values(mes).reduce((a,b)=>a+b,0);
+  const resueltosTotal = resueltosPorMes.reduce((a,b)=>a+b,0);
+  const sinResolver = totalMes - resueltosTotal;
+  document.getElementById('nota-mes-total').textContent = sinResolver > 0
+    ? `Los ${sinResolver.toLocaleString()} tickets que no aparecen como "Resueltos" están Nuevos, Cancelados o En Progreso — ver el desglose en "Tickets por Mes — por Resultado" más abajo.`
+    : '';
+
+  // Vista auxiliar: igual que 'rows' pero con SIN_ASIGNAR en vez de '' para que
+  // estos dos gráficos usen el mismo rótulo/color que los pills de filtro.
+  const rowsAsig = rows.map(r => r.asignado ? r : { ...r, asignado: SIN_ASIGNAR });
+
+  // Asignados (todos los técnicos que aparecen en el Excel, top 15)
+  const asignadoTop = sortedTop(rowsAsig, 'asignado', 15);
+  const asigLabels = Object.keys(asignadoTop).map(a => a === SIN_ASIGNAR ? a : prettyName(a));
+  const asigColors = Object.keys(asignadoTop).map(a => ASSIGNEE_COLORS[a] || COLORS.violet);
+  const totalAsig = Object.values(asignadoTop).reduce((a,b)=>a+b,0);
+  makeBar('chart-asignado', asigLabels, Object.values(asignadoTop), asigColors);
+  document.getElementById('cnt-asignado').textContent = `${totalAsig} tickets`;
+
+  // Tickets por Mes, desglosado por resultado (respeta el técnico filtrado con los pills de arriba)
+  const mesLabels = Object.keys(mes); // ya viene en orden Enero..Diciembre, solo meses con datos
+
+  // conteo[mes][etapa] = cantidad
+  const conteoMesEtapa = {};
+  rows.forEach(r => {
+    if (!r.mes) return;
+    const bucket = conteoMesEtapa[r.mes] || (conteoMesEtapa[r.mes] = {});
+    const etapaKey = ETAPA_ORDEN.includes(r.etapa) ? r.etapa : 'Otra';
+    bucket[etapaKey] = (bucket[etapaKey] || 0) + 1;
+  });
+
+  // Un mini-gráfico independiente por resultado: cada uno con su propia escala,
+  // así los valores pequeños (p.ej. cancelados) se ven claramente en vez de
+  // perderse como una franja delgada dentro de una sola barra apilada.
+  const getSerieMes = etapaNombre => mesLabels.map(m => (conteoMesEtapa[m] || {})[etapaNombre] || 0);
+  makeBar('chart-mes-resuelto',  mesLabels, getSerieMes('Resuelto'),    [ETAPA_COLORES['Resuelto']]);
+  makeBar('chart-mes-nuevo',     mesLabels, getSerieMes('Nuevo'),       [ETAPA_COLORES['Nuevo']]);
+  makeBar('chart-mes-cancelado', mesLabels, getSerieMes('Cancelada'),  [ETAPA_COLORES['Cancelada']]);
+  makeBar('chart-mes-progreso',  mesLabels, getSerieMes('En progreso'),[ETAPA_COLORES['En progreso']]);
+  document.getElementById('cnt-mes-tecnico').textContent = `${rows.length.toLocaleString()} tickets`;
+
+  // Desempeño por Responsable (Tickets, % ANS, Prom. horas solución)
+  updateDesempenoResponsableTable(rowsAsig);
+
+  // Tickets por día del mes en curso, por etapa
+  updateDiaEtapaChart(rows);
+
+  // Cliente con más tickets por mes
+  updateClienteMesTable(rows, mesLabels);
+
+  // Top 10 Clientes
+  const cl = sortedTop(rows, 'cliente', 10);
+  const clKeys = Object.keys(cl).map(k => k.replace('FARMACIAS MIA ','').replace('FARMACIAS SAN GREGORIO ',''));
+  makeBar('chart-cliente', clKeys, Object.values(cl), PALETTE);
+  document.getElementById('cnt-cliente').textContent = Object.keys(countBy(rows,'cliente')).length + ' sucursales';
+
+  // Top 10 motivos
+  const mot = sortedTop(rows, 'motivo', 10);
+  makeBar('chart-motivo', Object.keys(mot).map(k=>k.length>28?k.slice(0,28)+'…':k), Object.values(mot), PALETTE, { horizontal: true });
+
+  // Detalle completo de Motivo y Etiquetas, resumen por Etapa, Departamento y Equipo Mesa de Ayuda
+  updateListaCompleta(rows, 'motivo', 'tabla-motivo-full', 'cnt-motivo-full', 'motivos');
+  updateListaCompleta(rows, 'etiqueta', 'tabla-etiqueta-full', 'cnt-etiqueta-full', 'etiquetas');
+  updateResumenSimple(rows, 'etapa', 'tabla-resumen-etapa', ETAPA_ORDEN);
+  updateResumenSimple(rows, 'departamento', 'tabla-departamento');
+  updateResumenSimple(rows, 'equipoMesaAyuda', 'tabla-equipo-mesa');
+}
+
+// =============================================
+// DETALLE COMPLETO (todas las categorías, no solo el top 10)
+// =============================================
+function updateListaCompleta(rows, campo, tbodyId, badgeId, unidad) {
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '';
+  const conteo = countBy(rows, campo);
+  const entradas = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
+
+  entradas.forEach(([nombre, cantidad]) => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.innerHTML = `
+      <td style="padding:0.45rem 0.75rem;">${nombre}</td>
+      <td style="padding:0.45rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700;">${cantidad.toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  if (badgeId) {
+    document.getElementById(badgeId).textContent = `${entradas.length} ${unidad || ''}`.trim();
+  }
+}
+
+// Tabla simple de conteo por campo (Etapa, Departamento, Equipo Mesa de Ayuda, etc.)
+// Si se pasa 'orden', esas categorías van primero en ese orden; el resto se ordena por cantidad.
+function updateResumenSimple(rows, campo, tbodyId, orden) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const conteo = countBy(rows, campo, orden);
+
+  Object.entries(conteo).forEach(([nombre, cantidad]) => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.innerHTML = `
+      <td style="padding:0.45rem 0.75rem;">${nombre}</td>
+      <td style="padding:0.45rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700;">${cantidad.toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// =============================================
+// TICKETS POR DÍA DEL MES EN CURSO, POR ETAPA
+// =============================================
+const ETAPA_ORDEN = ['Nuevo', 'En progreso', 'Resuelto', 'Cancelada'];
+const ETAPA_COLORES = {
+  'Nuevo':       COLORS.amber,
+  'En progreso': COLORS.blue,
+  'Resuelto':    COLORS.green,
+  'Cancelada':   '#6B7280', // gris oscuro (COLORS.steel es demasiado claro para texto blanco encima)
+  'Otra':        '#9CA3AF',
+};
+
+function updateDiaEtapaChart(rows) {
+  const MES_NOMBRES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  // "Último mes" = el mes más reciente que realmente tiene datos en el Excel
+  // cargado (no la fecha del sistema), para que funcione igual sin importar
+  // cuándo se abra el dashboard o qué período traiga el archivo.
+  const fechasValidas = ALL_ROWS.map(r => r.fecha).filter(Boolean).sort();
+  if (fechasValidas.length === 0) {
+    document.getElementById('titulo-dia-etapa').textContent = 'Tickets por Día';
+    document.getElementById('cnt-dia-etapa').textContent = '0 tickets';
+    ['resuelto','nuevo','cancelado','progreso'].forEach(k => makeBar(`chart-dia-${k}`, [], [], ['#9CA3AF']));
+    return;
+  }
+  const ultimaFecha = fechasValidas[fechasValidas.length - 1]; // 'YYYY-MM-DD'
+  const anioActual = ultimaFecha.slice(0, 4);
+  const mesActualIdx = parseInt(ultimaFecha.slice(5, 7), 10) - 1;
+  const mesActualNombre = MES_NOMBRES[mesActualIdx];
+  // Solo hasta el último día con datos reales (no el mes calendario completo),
+  // para no mostrar una fila de ceros por los días que todavía no han pasado.
+  const ultimoDiaConDatos = parseInt(ultimaFecha.slice(8, 10), 10);
+
+  document.getElementById('titulo-dia-etapa').textContent =
+    `Tickets por Día — ${mesActualNombre} ${anioActual}`;
+
+  // Filtra al último mes/año con datos (respeta los demás filtros ya aplicados a 'rows',
+  // como el técnico seleccionado en los pills, pero no el filtro de Año/Mes de arriba)
+  const rowsMes = rows.filter(r => r.anio === anioActual && r.mes === mesActualNombre);
+
+  const dias = Array.from({ length: ultimoDiaConDatos }, (_, i) => i + 1);
+  const conteoDiaEtapa = {}; // { dia: { etapa: cantidad } }
+  rowsMes.forEach(r => {
+    if (!r.fecha) return;
+    const dia = parseInt(r.fecha.slice(8, 10), 10);
+    if (!dia) return;
+    const etapaKey = ETAPA_ORDEN.includes(r.etapa) ? r.etapa : 'Otra';
+    const bucket = conteoDiaEtapa[dia] || (conteoDiaEtapa[dia] = {});
+    bucket[etapaKey] = (bucket[etapaKey] || 0) + 1;
+  });
+
+  // Un mini-gráfico independiente por resultado (misma razón que en la vista por mes)
+  const diaLabels = dias.map(String);
+  const getSerieDia = etapaNombre => dias.map(d => (conteoDiaEtapa[d] || {})[etapaNombre] || 0);
+  makeBar('chart-dia-resuelto',  diaLabels, getSerieDia('Resuelto'),     [ETAPA_COLORES['Resuelto']]);
+  makeBar('chart-dia-nuevo',     diaLabels, getSerieDia('Nuevo'),        [ETAPA_COLORES['Nuevo']]);
+  makeBar('chart-dia-cancelado', diaLabels, getSerieDia('Cancelada'),   [ETAPA_COLORES['Cancelada']]);
+  makeBar('chart-dia-progreso',  diaLabels, getSerieDia('En progreso'), [ETAPA_COLORES['En progreso']]);
+  document.getElementById('cnt-dia-etapa').textContent = `${rowsMes.length.toLocaleString()} tickets`;
+}
+
+// =============================================
+// CLIENTE CON MÁS TICKETS POR MES
+// =============================================
+function updateClienteMesTable(rows, mesLabels) {
+  const tbody = document.getElementById('tabla-cliente-mes');
+  tbody.innerHTML = '';
+
+  mesLabels.forEach(mesNombre => {
+    const rowsDelMes = rows.filter(r => r.mes === mesNombre && r.cliente);
+    if (rowsDelMes.length === 0) return;
+
+    const conteo = {};
+    rowsDelMes.forEach(r => { conteo[r.cliente] = (conteo[r.cliente] || 0) + 1; });
+    const [clienteTop, cantidad] = Object.entries(conteo).sort((a, b) => b[1] - a[1])[0];
+    const nombreCorto = clienteTop.replace('FARMACIAS MIA ', '').replace('FARMACIAS SAN GREGORIO ', '');
+
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.innerHTML = `
+      <td style="padding:0.5rem 0.75rem; font-weight:600; color:var(--violet);">${mesNombre}</td>
+      <td style="padding:0.5rem 0.75rem;">${nombreCorto}</td>
+      <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700;">${cantidad.toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// =============================================
+// DESEMPEÑO POR RESPONSABLE (Tickets, % ANS, Prom. horas solución)
+// =============================================
+function updateDesempenoResponsableTable(rowsAsig) {
+  const tbody = document.getElementById('tabla-desempeno-responsable');
+  tbody.innerHTML = '';
+
+  const porTecnico = {};
+  rowsAsig.forEach(r => {
+    const b = porTecnico[r.asignado] || (porTecnico[r.asignado] = {
+      total: 0, ansSi: 0, ansTotal: 0, horas: [],
+      resuelto: 0, nuevo: 0, cancelada: 0, enProgreso: 0,
+    });
+    b.total++;
+    if (r.cumpleAns === 'Sí' || r.cumpleAns === 'No') {
+      b.ansTotal++;
+      if (r.cumpleAns === 'Sí') b.ansSi++;
+    }
+    if (r.tiempoSolucion > 0) b.horas.push(r.tiempoSolucion);
+    if (r.etapa === 'Resuelto') b.resuelto++;
+    else if (r.etapa === 'Nuevo') b.nuevo++;
+    else if (r.etapa === 'Cancelada') b.cancelada++;
+    else if (r.etapa === 'En progreso') b.enProgreso++;
+  });
+
+  Object.entries(porTecnico)
+    .sort((a, b) => b[1].total - a[1].total)
+    .forEach(([nombre, d]) => {
+      const ansPct = d.ansTotal ? (d.ansSi / d.ansTotal * 100).toFixed(1) + '%' : '–';
+      const avgH   = d.horas.length ? (d.horas.reduce((a,b)=>a+b,0)/d.horas.length).toFixed(1) : '–';
+      const color  = ASSIGNEE_COLORS[nombre] || COLORS.violet;
+      const label  = nombre === SIN_ASIGNAR ? nombre : prettyName(nombre);
+
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border)';
+      tr.innerHTML = `
+        <td style="padding:0.5rem 0.75rem; font-weight:600; color:${color};">${label}</td>
+        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700;">${d.total.toLocaleString()}</td>
+        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.green};">${d.resuelto.toLocaleString()}</td>
+        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.amber};">${d.nuevo.toLocaleString()}</td>
+        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.tomato};">${d.cancelada.toLocaleString()}</td>
+        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.blue};">${d.enProgreso.toLocaleString()}</td>
+        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace;">${ansPct}</td>
+        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace;">${avgH}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+}
+
+// =============================================
+// UTILS
+// =============================================
+function showSpinner(show) {
+  document.getElementById('spinner').style.display = show ? 'flex' : 'none';
+}
+
+// =============================================
+// VISTA GERENCIAL / VISTA COMPLETA
+// =============================================
+function setVista(modo) {
+  const esGerencial = modo === 'gerencial';
+  document.body.classList.toggle('modo-gerencial', esGerencial);
+
+  const btnGer = document.getElementById('btn-vista-gerencial');
+  const btnCom = document.getElementById('btn-vista-completa');
+  const activo   = { background: 'white', color: 'var(--violet)' };
+  const inactivo = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' };
+  Object.assign(btnGer.style, esGerencial ? activo : inactivo);
+  Object.assign(btnCom.style, esGerencial ? inactivo : activo);
+
+  // Los gráficos ocultos con display:none no se redimensionan solos al reaparecer;
+  // forzamos un resize para que Chart.js los vuelva a dibujar correctamente.
+  setTimeout(() => Object.values(CHARTS).forEach(c => c && c.resize && c.resize()), 50);
+}
+</script>
+</body>
+</html>
