@@ -147,7 +147,6 @@
   .chart-title-left { display: flex; align-items: center; gap: 0.6rem; }
   .chart-title-left::before { content:''; display:inline-block; width:4px; height:18px; background:var(--tomato); border-radius:3px; flex-shrink:0; }
   .badge { background: var(--violet-pale); color: var(--violet); font-size: 0.67rem; font-weight: 700; border-radius: 999px; padding: 0.15rem 0.65rem; }
-  .mini-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.5rem; }
 
   .kpi-meta-card { background:#fff; border-radius:14px; padding:1rem 1.1rem 0.8rem; box-shadow:0 2px 10px rgba(73,38,127,0.06); border-left:5px solid var(--violet); transition:transform .15s; }
   .kpi-meta-card:hover { transform: translateY(-3px); }
@@ -307,6 +306,9 @@
     </div>
   </div>
 
+  <!-- Aviso de columnas faltantes / sin datos -->
+  <div id="aviso-columnas" style="display:none; background:#FFF7E6; border:1px solid #F5C26B; color:#7A4B00; border-radius:12px; padding:0.75rem 1rem; font-size:0.78rem; line-height:1.5;"></div>
+
   <!-- DASHBOARD (oculto hasta cargar datos) -->
   <div id="dashboard-content">
 
@@ -397,14 +399,6 @@
       </div>
       <div class="kpi-card blue detalle-operativo">
         <div class="kpi-top">
-          <div class="kpi-num mono" id="kpi-ans">–</div>
-          <div class="kpi-icon">📊</div>
-        </div>
-        <div class="kpi-label">% Cumplimiento ANS</div>
-        <div class="kpi-sub" id="kpi-ans-sub"></div>
-      </div>
-      <div class="kpi-card blue detalle-operativo">
-        <div class="kpi-top">
           <div class="kpi-num mono" id="kpi-tiempo">–</div>
           <div class="kpi-icon">⏱️</div>
         </div>
@@ -424,15 +418,17 @@
     <!-- ROW: Indicadores con meta (semáforo + tendencia semanal) -->
     <section>
       <div style="font-size:0.8rem; font-weight:700; color:var(--violet); margin-bottom:0.7rem;">🚦 Indicadores con Meta</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div class="kpi-meta-card" id="card-meta-ans">
-          <div class="kpi-meta-label">% Cumplimiento ANS</div>
+      <div style="font-size:0.72rem; color:var(--muted); margin:-0.35rem 0 0.8rem;">La <strong>meta</strong> es el objetivo a alcanzar. Cada tarjeta se pinta <span style="color:var(--green); font-weight:700;">verde</span> si la cumple, <span style="color:var(--amber); font-weight:700;">ámbar</span> si está cerca y <span style="color:var(--tomato); font-weight:700;">rojo</span> si está lejos. En el gráfico, la línea punteada es la meta y cada punto es una semana.</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div class="kpi-meta-card" id="card-meta-ansasig">
+          <div class="kpi-meta-label">Prom. asignación → cierre</div>
           <div class="kpi-meta-row">
-            <div class="kpi-meta-num mono" id="kpi-meta-ans">–</div>
-            <div class="kpi-meta-dot" id="dot-meta-ans"></div>
+            <div class="kpi-meta-num mono" id="kpi-meta-ansasig">–</div>
+            <div class="kpi-meta-dot" id="dot-meta-ansasig"></div>
           </div>
-          <div class="kpi-meta-target">Meta: ≥ 90%</div>
-          <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-ans"></canvas></div>
+          <div class="kpi-meta-target" id="kpi-meta-ansasig-meta">Meta: según la columna POLITICA ANS (HORAS)</div>
+          <div class="kpi-meta-target" id="kpi-meta-ansasig-sub" style="font-weight:600;"></div>
+          <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-ansasig"></canvas></div>
         </div>
         <div class="kpi-meta-card" id="card-meta-horassol">
           <div class="kpi-meta-label">Prom. Horas Solución</div>
@@ -440,7 +436,7 @@
             <div class="kpi-meta-num mono" id="kpi-meta-horassol">–</div>
             <div class="kpi-meta-dot" id="dot-meta-horassol"></div>
           </div>
-          <div class="kpi-meta-target">Meta: ≤ 24h</div>
+          <div class="kpi-meta-target">Meta: 24 h o menos</div>
           <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-horassol"></canvas></div>
         </div>
         <div class="kpi-meta-card" id="card-meta-horas1ra">
@@ -449,7 +445,7 @@
             <div class="kpi-meta-num mono" id="kpi-meta-horas1ra">–</div>
             <div class="kpi-meta-dot" id="dot-meta-horas1ra"></div>
           </div>
-          <div class="kpi-meta-target">Meta: ≤ 4h</div>
+          <div class="kpi-meta-target">Meta: 4 h o menos</div>
           <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-horas1ra"></canvas></div>
         </div>
         <div class="kpi-meta-card" id="card-meta-pendientes">
@@ -458,7 +454,7 @@
             <div class="kpi-meta-num mono" id="kpi-meta-pendientes">–</div>
             <div class="kpi-meta-dot" id="dot-meta-pendientes"></div>
           </div>
-          <div class="kpi-meta-target">Meta: ≤ 5%</div>
+          <div class="kpi-meta-target">Meta: 5% o menos</div>
           <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-pendientes"></canvas></div>
         </div>
         <div class="kpi-meta-card" id="card-meta-cancelados">
@@ -467,35 +463,20 @@
             <div class="kpi-meta-num mono" id="kpi-meta-cancelados">–</div>
             <div class="kpi-meta-dot" id="dot-meta-cancelados"></div>
           </div>
-          <div class="kpi-meta-target">Meta: ≤ 3%</div>
+          <div class="kpi-meta-target">Meta: 3% o menos</div>
           <div style="height:70px; margin-top:0.5rem;"><canvas id="chart-trend-cancelados"></canvas></div>
         </div>
       </div>
     </section>
 
-    <!-- ROW: Tickets por día del último mes con datos, por resultado (4 mini-gráficos) -->
+    <!-- ROW: Tickets por día del último mes con datos, por resultado (un solo gráfico agrupado) -->
     <div class="chart-card detalle-operativo">
       <div class="chart-title">
         <span class="chart-title-left" id="titulo-dia-etapa">Tickets por Día</span>
         <span class="badge" id="cnt-dia-etapa"></span>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <div class="mini-title">✅ Resueltos</div>
-          <div style="height:200px"><canvas id="chart-dia-resuelto"></canvas></div>
-        </div>
-        <div>
-          <div class="mini-title">🆕 Nuevos (Pendientes)</div>
-          <div style="height:200px"><canvas id="chart-dia-nuevo"></canvas></div>
-        </div>
-        <div>
-          <div class="mini-title">🚫 Cancelados</div>
-          <div style="height:200px"><canvas id="chart-dia-cancelado"></canvas></div>
-        </div>
-        <div>
-          <div class="mini-title">🔧 En Progreso</div>
-          <div style="height:200px"><canvas id="chart-dia-progreso"></canvas></div>
-        </div>
+      <div class="chart-scroll">
+        <div style="min-width:900px; height:320px"><canvas id="chart-dia-resultado"></canvas></div>
       </div>
     </div>
 
@@ -509,6 +490,22 @@
       <div style="margin-top:0.6rem; font-size:0.72rem; color:var(--muted); font-style:italic;" id="nota-mes-total"></div>
     </div>
 
+    <!-- ROW: Prom. Horas Solución por mes -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-left">Prom. Horas Solución por Mes</span>
+        <span class="badge" id="cnt-horas-mes"></span>
+      </div>
+      <div class="chart-scroll">
+        <div style="min-width:640px; height:300px"><canvas id="chart-horas-mes"></canvas></div>
+      </div>
+      <div style="margin-top:0.6rem; font-size:0.7rem; color:var(--muted); line-height:1.5;">
+        Horas entre la <strong>1ra asignación y el cierre</strong>, promedio de los tickets de cada mes (mes de creación).
+        <strong>Todas las horas</strong>: tiempo del Excel (columna HORAS SOLUCION), cuenta noches, fines de semana y almuerzo; es el mismo cálculo del indicador "Prom. Horas Solución".
+        <strong>Solo horario laboral</strong>: cuenta únicamente lunes a viernes de 8:30 a 17:30, descontando el almuerzo de 13:00 a 14:00.
+      </div>
+    </div>
+
     <!-- ROW: Asignados (barras side by side) -->
     <div class="chart-card">
       <div class="chart-title">
@@ -518,29 +515,14 @@
       <div style="height:220px"><canvas id="chart-asignado"></canvas></div>
     </div>
 
-    <!-- ROW: Tickets por Mes, desglosado por resultado (4 mini-gráficos, cada uno con su propia escala) -->
+    <!-- ROW: Tickets por Mes, por resultado (un solo gráfico, barras agrupadas) -->
     <div class="chart-card detalle-operativo">
       <div class="chart-title">
         <span class="chart-title-left">Tickets por Mes — por Resultado</span>
         <span class="badge" id="cnt-mes-tecnico"></span>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <div class="mini-title">✅ Resueltos</div>
-          <div style="height:200px"><canvas id="chart-mes-resuelto"></canvas></div>
-        </div>
-        <div>
-          <div class="mini-title">🆕 Nuevos (Pendientes)</div>
-          <div style="height:200px"><canvas id="chart-mes-nuevo"></canvas></div>
-        </div>
-        <div>
-          <div class="mini-title">🚫 Cancelados</div>
-          <div style="height:200px"><canvas id="chart-mes-cancelado"></canvas></div>
-        </div>
-        <div>
-          <div class="mini-title">🔧 En Progreso</div>
-          <div style="height:200px"><canvas id="chart-mes-progreso"></canvas></div>
-        </div>
+      <div class="chart-scroll">
+        <div style="min-width:640px; height:320px"><canvas id="chart-mes-resultado"></canvas></div>
       </div>
     </div>
 
@@ -550,7 +532,7 @@
         <span class="chart-title-left">Desempeño por Responsable</span>
       </div>
       <div class="chart-scroll">
-        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; min-width:680px;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; min-width:780px;">
           <thead>
             <tr style="border-bottom:2px solid var(--border);">
               <th style="text-align:left; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Responsable</th>
@@ -559,12 +541,34 @@
               <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Nuevo</th>
               <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Cancelada</th>
               <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">En Progreso</th>
-              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">% ANS</th>
               <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;">Prom. horas solución</th>
+              <th style="text-align:right; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;" title="Promedio de horas laborables entre la 1ra asignación y el cierre, contra la meta (POLITICA ANS (HORAS))">Prom. asignación → cierre</th>
             </tr>
           </thead>
           <tbody id="tabla-desempeno-responsable"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ROW: Meta por persona y mes (promedio asignación → cierre) -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-left">Meta por Persona y Mes — Promedio Asignación → Cierre</span>
+      </div>
+      <div class="chart-scroll">
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+          <thead><tr id="matriz-meta-head" style="border-bottom:2px solid var(--border);"></tr></thead>
+          <tbody id="matriz-meta-body"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:0.7rem; font-size:0.7rem; color:var(--muted); line-height:1.5;">
+        Cada celda es el <strong>promedio de horas</strong> entre la <strong>fecha y hora de la 1ra asignación</strong> y la <strong>fecha y hora de cierre</strong> de los tickets resueltos de ese mes (mes de creación).
+        La <strong>meta</strong> son las horas de la columna POLITICA ANS (HORAS) de esos tickets.
+        Las políticas <strong>«N días»</strong> (p. ej. 2 días = 48 h) se miden en <strong>horas corridas</strong>; las <strong>«hábil»</strong> y <strong>«N horas»</strong> (1 Día hábil = 8 h), en <strong>horas laborables</strong>.
+        <span style="color:var(--green); font-weight:700;">Verde</span>: dentro de la meta ·
+        <span style="color:var(--amber); font-weight:700;">Ámbar</span>: hasta 25% por encima ·
+        <span style="color:var(--tomato); font-weight:700;">Rojo</span>: más del 25% por encima.
+        Pasa el cursor sobre una celda para ver cuántos tickets son.
       </div>
     </div>
 
@@ -690,6 +694,65 @@
       </div>
     </div>
 
+    <!-- ROW: Detalle de tickets (tiempos) + promedios -->
+    <div class="chart-card detalle-operativo">
+      <div class="chart-title">
+        <span class="chart-title-left">Detalle de Tickets — Tiempos</span>
+        <span class="badge" id="cnt-detalle"></span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" style="margin-bottom:1rem;">
+        <div class="kpi-meta-card" style="border-left-color:var(--violet);">
+          <div class="kpi-meta-label">Prom. Tiempo 1ra Asignación</div>
+          <div class="kpi-meta-num mono" id="prom-asig" style="font-size:1.35rem;">–</div>
+          <div class="kpi-meta-target" id="prom-asig-sub"></div>
+        </div>
+        <div class="kpi-meta-card" style="border-left-color:var(--green);">
+          <div class="kpi-meta-label">Prom. Tiempo Solución Real</div>
+          <div class="kpi-meta-num mono" id="prom-real" style="font-size:1.35rem;">–</div>
+          <div class="kpi-meta-target" id="prom-real-sub"></div>
+        </div>
+      </div>
+
+      <div class="chart-scroll" style="max-height:440px; overflow:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.76rem; min-width:1100px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;"># REF</th>
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Asignado</th>
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Etapa</th>
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Fecha creado</th>
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Hora creado</th>
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Fecha asignación</th>
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Hora asignación</th>
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Fecha cierre</th>
+              <th style="text-align:left; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Hora cierre</th>
+              <th style="text-align:right; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Tiempo 1ra asignación</th>
+              <th style="text-align:right; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Tiempo solución SLA</th>
+              <th style="text-align:right; padding:0.5rem 0.65rem; color:var(--muted); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; position:sticky; top:0; background:#fff; white-space:nowrap;">Tiempo solución real</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-detalle-tickets"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:0.6rem; margin-top:0.8rem; font-size:0.74rem; color:var(--muted);">
+        <span id="detalle-info"></span>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <label>Filas por página
+            <select id="detalle-size" class="filter-select" style="width:auto; display:inline-block; padding:0.2rem 0.5rem;" onchange="DETALLE.size=parseInt(this.value,10); DETALLE.page=1; renderDetallePage();">
+              <option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option>
+            </select>
+          </label>
+          <button class="btn-reset-filters" id="detalle-prev" onclick="DETALLE.page--; renderDetallePage();">← Anterior</button>
+          <button class="btn-reset-filters" id="detalle-next" onclick="DETALLE.page++; renderDetallePage();">Siguiente →</button>
+        </div>
+      </div>
+      <div style="margin-top:0.6rem; font-size:0.68rem; color:var(--muted); font-style:italic;">
+        Promedios sobre los tickets del filtro actual (no solo la página visible). Los promedios excluyen vacíos, 0 y negativos.
+      </div>
+    </div>
+
   </div><!-- /dashboard-content -->
 </main>
 
@@ -775,8 +838,13 @@ function handleFile(file) {
     try {
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, { type: 'array', cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      // Usa la primera hoja que tenga la columna "# REF" (el libro puede traer otras hojas, como "Dashboard")
+      let jsonData = null;
+      for (const nombreHoja of wb.SheetNames) {
+        const filasHoja = XLSX.utils.sheet_to_json(wb.Sheets[nombreHoja], { header: 1, defval: '' });
+        if (filasHoja.slice(0, 25).some(fila => fila.some(c => String(c).trim() === '# REF'))) { jsonData = filasHoja; break; }
+      }
+      if (!jsonData) jsonData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
 
       // Encontrar fila de encabezados dinámicamente
       let headerIdx = -1;
@@ -793,13 +861,18 @@ function handleFile(file) {
         return;
       }
 
-      const headers = jsonData[headerIdx].map(h => String(h).trim());
+      const normH = h => String(h).trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+      const headers = jsonData[headerIdx].map(normH);
+      const headersEncontrados = new Set(headers);
       const rows = [];
       for (let i = headerIdx + 1; i < jsonData.length; i++) {
         const rowArr = jsonData[i];
         if (!rowArr || rowArr.every(c => c === '' || c === null || c === undefined)) continue;
         const obj = {};
-        headers.forEach((h, idx) => { obj[h] = rowArr[idx] ?? ''; });
+        headers.forEach((h, idx) => {
+          const v = rowArr[idx] ?? '';
+          if (obj[h] === undefined || obj[h] === '') obj[h] = v; // si un encabezado se repite, conserva el primero con dato
+        });
         rows.push(obj);
       }
 
@@ -822,13 +895,34 @@ function handleFile(file) {
         tiempoSolucion:     ['HORAS SOLUCION', 'TIEMPO DE SOLUCION (HORAS)'],
         tiempoAbierto:      ['TIEMPO ABIERTO'],
         horas1raAsignacion: ['HORAS 1RA ASIGNACION'],
-        cumpleAns:          ['CUMPLE ANS'],
+        // Columnas crudas del sistema: sirven para calcular las horas cuando las columnas calculadas vienen vacías
+        tiempoSolucionReal: ['TIEMPO SOLUCION REAL'],
+        tiempoPrimeraAsig:  ['TIEMPO PRIMERA ASIGNACION'],
+        tiempoSolucionSla:  ['TIEMPO SOLUCION SLA'],
+        politicaAnsHoras:   ['POLITICA ANS (HORAS)'],
+        // Detalle de tickets
+        politicaAns:        ['POLITICA ANS'],
+        fechaCreado:        ['FECHA CREADO'],
+        horaCreado:         ['HORA CREADO'],
+        fechaAsignacion:    ['FECHA ASIGNACION'],
+        horaAsignacion:     ['HORA ASIGNACION'],
+        fechaCierre:        ['FECHA CIERRE'],
+        horaCierre:         ['HORA CIERRE'],
       };
       const getField = (row, key) => {
         for (const alias of FIELD_ALIASES[key]) {
-          if (row[alias] !== undefined && row[alias] !== '') return row[alias];
+          const v = row[normH(alias)];
+          if (v !== undefined && v !== '') return v;
         }
         return '';
+      };
+      const p2 = n => String(n).padStart(2, '0');
+      const txtFecha = v => v instanceof Date ? `${v.getFullYear()}-${p2(v.getMonth()+1)}-${p2(v.getDate())}` : String(v ?? '').trim();
+      const txtHora  = v => v instanceof Date ? `${p2(v.getHours())}:${p2(v.getMinutes())}:${p2(v.getSeconds())}` : String(v ?? '').trim();
+      // 'hh:mm:ss' -> horas decimales (ignora valores negativos o mal formados)
+      const hmsAHoras = v => {
+        const m = String(v ?? '').match(/^\s*(\d+):(\d{1,2}):(\d{1,2})/);
+        return m ? (+m[1] + (+m[2]) / 60 + (+m[3]) / 3600) : null;
       };
 
       ALL_ROWS = rows.map(r => ({
@@ -844,11 +938,52 @@ function handleFile(file) {
         fecha:              parseFecha(getField(r, 'fecha')),
         anio:               parseFecha(getField(r, 'fecha')).slice(0,4) || '',
         etapa:              String(getField(r, 'etapa') || '').trim(),
-        tiempoSolucion:     parseFloat(getField(r, 'tiempoSolucion')) || 0,
+        tiempoSolucion:     parseFloat(getField(r, 'tiempoSolucion')) || hmsAHoras(getField(r, 'tiempoSolucionReal')) || 0,
         tiempoAbierto:      parseFloat(getField(r, 'tiempoAbierto')) || 0,
-        horas1raAsignacion: parseFloat(getField(r, 'horas1raAsignacion')) || 0,
-        cumpleAns:          String(getField(r, 'cumpleAns') || '').trim(),
+        horas1raAsignacion: parseFloat(getField(r, 'horas1raAsignacion')) || hmsAHoras(getField(r, 'tiempoPrimeraAsig')) || 0,
+        politicaAnsHoras:   parseFloat(getField(r, 'politicaAnsHoras')) || 0,
+        politicaAns:        String(getField(r, 'politicaAns') ?? '').trim(),
+        fechaCreado:        txtFecha(getField(r, 'fechaCreado')),
+        horaCreado:         txtHora(getField(r, 'horaCreado')),
+        fechaAsignacion:    txtFecha(getField(r, 'fechaAsignacion')),
+        horaAsignacion:     txtHora(getField(r, 'horaAsignacion')),
+        fechaCierre:        txtFecha(getField(r, 'fechaCierre')),
+        horaCierre:         txtHora(getField(r, 'horaCierre')),
+        tiempoPrimeraAsig:  txtHora(getField(r, 'tiempoPrimeraAsig')),
+        tiempoSolucionSla:  String(getField(r, 'tiempoSolucionSla') ?? '').trim(),
+        tiempoSolucionReal: txtHora(getField(r, 'tiempoSolucionReal')),
       })).filter(r => r.ref !== '' && r.ref !== '# REF');
+
+      // Tiempo real entre 1ra asignación y cierre: en horas corridas y en horas laborables
+      ALL_ROWS.forEach(r => {
+        const ini = fechaHoraADate(r.fechaAsignacion, r.horaAsignacion);
+        const fin = fechaHoraADate(r.fechaCierre, r.horaCierre);
+        const valido = ini && fin && fin >= ini;
+        r.hCorrAsig = valido ? (fin - ini) / 3600000 : null;
+        r.hLabAsig  = valido ? horasLaborables(ini, fin) : null;
+        // Horas "medidas" contra la meta: corridas para políticas "N días", laborables para el resto
+        r.hMedida   = valido ? (politicaEsCorrida(r.politicaAns) ? r.hCorrAsig : r.hLabAsig) : null;
+      });
+
+      // Diagnóstico: ¿el archivo trae las columnas que usan los indicadores?
+      const faltantes = [];
+      const haySol     = ALL_ROWS.some(r => r.tiempoSolucion > 0);
+      const hayAsig    = ALL_ROWS.some(r => r.horas1raAsignacion > 0);
+      const hayPolit   = ALL_ROWS.some(r => r.politicaAnsHoras > 0);
+      const hayFechas  = ALL_ROWS.some(r => r.hLabAsig !== null);
+      if (!hayPolit)  faltantes.push('Meta por persona y mes (columna POLITICA ANS (HORAS))');
+      if (!hayFechas) faltantes.push('Prom. asignación → cierre (columnas FECHA ASIGNACION, HORA ASIGNACION, FECHA CIERRE y HORA CIERRE)');
+      if (!haySol)    faltantes.push('Prom. Horas Solución (columnas HORAS SOLUCION o TIEMPO SOLUCION REAL)');
+      if (!hayAsig)   faltantes.push('Prom. Horas 1ra Asignación (columnas HORAS 1RA ASIGNACION o TIEMPO PRIMERA ASIGNACION)');
+      const aviso = document.getElementById('aviso-columnas');
+      if (faltantes.length) {
+        aviso.innerHTML = '⚠️ <strong>El Excel cargado no trae datos para:</strong><br>• ' + faltantes.join('<br>• ') +
+          '<br><span style="opacity:0.8">Por eso esos indicadores aparecen en "–". Revisa que la exportación incluya esas columnas (nombres exactos de encabezado).</span>';
+        aviso.style.display = 'block';
+      } else {
+        aviso.style.display = 'none';
+      }
+      console.info('Columnas detectadas:', [...headersEncontrados]);
 
       // Generar los pills de técnico dinámicamente según lo que traiga el Excel
       buildAssigneePills(ALL_ROWS);
@@ -863,6 +998,9 @@ function handleFile(file) {
       document.getElementById('file-name-badge').textContent = '📄 ' + file.name;
       document.getElementById('file-row-count').textContent = ALL_ROWS.length.toLocaleString();
       document.getElementById('dashboard-content').style.display = 'block';
+
+      // Primer dibujado: KPIs, gráficos y tablas con todos los datos recién cargados
+      applyFilters();
 
       const now = new Date();
       document.getElementById('last-update').textContent =
@@ -1107,7 +1245,6 @@ function renderFilterTags() {
 // INDICADORES CON META (semáforo + tendencia semanal)
 // =============================================
 const METAS = {
-  ans:       { tipo: 'min', bueno: 90, medio: 80 }, // % ANS: >=90 verde, 80-89.9 ámbar, <80 rojo
   horasSol:  { tipo: 'max', bueno: 24, medio: 48 }, // horas solución: <=24 verde, 24-48 ámbar, >48 rojo
   horas1ra:  { tipo: 'max', bueno: 4,  medio: 8  },
   pctPend:   { tipo: 'max', bueno: 5,  medio: 10 },
@@ -1115,6 +1252,91 @@ const METAS = {
 };
 const SEMAFORO_COLOR = { green: COLORS.green, amber: COLORS.amber, red: COLORS.tomato, gray: '#9CA3AF' };
 const MES_ABBR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+// Horario laboral usado para medir "horas laborables" (editar aquí si cambia).
+// POLITICA ANS (HORAS) = 8 equivale a 8 horas dentro de este horario.
+const HORARIO_LABORAL = {
+  dias: [1, 2, 3, 4, 5],        // 0 = domingo ... 6 = sábado  →  lunes a viernes
+  tramos: [['08:30', '13:00'], ['14:00', '17:30']],  // 08:30–17:30 con 1 h de almuerzo (13:00–14:00) = 8 h por día. Para no descontar almuerzo: [['08:30', '17:30']]
+  feriados: [],                 // fechas 'AAAA-MM-DD' que no cuentan como laborables
+};
+
+function fechaHoraADate(f, h) {
+  const mf = String(f ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const mh = String(h ?? '').match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!mf || !mh) return null;
+  return new Date(+mf[1], +mf[2] - 1, +mf[3], +mh[1], +mh[2], +(mh[3] || 0));
+}
+
+function horasLaborables(ini, fin) {
+  if (!(fin > ini)) return 0;
+  let total = 0;
+  const dia = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate());
+  while (dia <= fin) {
+    const clave = `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, '0')}-${String(dia.getDate()).padStart(2, '0')}`;
+    if (HORARIO_LABORAL.dias.includes(dia.getDay()) && !HORARIO_LABORAL.feriados.includes(clave)) {
+      for (const [t1, t2] of HORARIO_LABORAL.tramos) {
+        const [h1, m1] = t1.split(':').map(Number), [h2, m2] = t2.split(':').map(Number);
+        const a = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), h1, m1);
+        const b = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), h2, m2);
+        const desde = a > ini ? a : ini, hasta = b < fin ? b : fin;
+        if (hasta > desde) total += (hasta - desde) / 3600000;
+      }
+    }
+    dia.setDate(dia.getDate() + 1);
+  }
+  return total;
+}
+
+// Cómo se mide cada política:
+//  · "N días ..." (p.ej. "2 días Compras" = 48 h)  → horas corridas (reloj de 24 h)
+//  · "N Día(s) hábil(es)" y "N horas"             → horas laborables (HORARIO_LABORAL)
+// Poner en false para medir todas las políticas en horas laborables.
+const POLITICAS_DIAS_EN_HORAS_CORRIDAS = true;
+function politicaEsCorrida(texto) {
+  if (!POLITICAS_DIAS_EN_HORAS_CORRIDAS) return false;
+  const t = String(texto ?? '');
+  if (/h[aá]bil|hora/i.test(t)) return false;
+  return /d[ií]as?/i.test(t);
+}
+
+// Meta = horas de la columna POLITICA ANS (HORAS) de cada ticket.
+// Verde: el promedio está dentro de la meta · Ámbar: hasta un 25% por encima · Rojo: más del 25% por encima.
+const TOLERANCIA_AMBAR = 1.25;
+
+// Tickets que se pueden evaluar: Resueltos, con política (> 0 h) y fechas de asignación/cierre válidas
+function evaluables(rows) {
+  return rows.filter(r => r.etapa === 'Resuelto' && r.politicaAnsHoras > 0 && r.hMedida !== null && r.hMedida !== undefined);
+}
+
+// Promedio de horas entre la 1ra asignación y el cierre (laborables y corridas) y meta promedio de esos tickets
+function promAsigCierre(rows) {
+  const ev = evaluables(rows);
+  if (!ev.length) return { n: 0, prom: null, meta: null, dentro: 0 };
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  return {
+    n: ev.length,
+    prom: avg(ev.map(r => r.hMedida)),
+    meta: avg(ev.map(r => r.politicaAnsHoras)),
+    dentro: ev.filter(r => r.hMedida <= r.politicaAnsHoras).length,
+  };
+}
+
+function nivelVsMeta(prom, meta) {
+  if (prom === null || meta === null) return 'gray';
+  return prom <= meta ? 'green' : (prom <= meta * TOLERANCIA_AMBAR ? 'amber' : 'red');
+}
+
+// Agrupa por mes de creación ('AAAA-MM') y aplica calcFn; devuelve los últimos nMeses
+function computeMonthlySeries(rows, nMeses, calcFn) {
+  const por = {};
+  rows.forEach(r => { const k = (r.fecha || '').slice(0, 7); if (k) (por[k] = por[k] || []).push(r); });
+  const claves = Object.keys(por).sort().slice(-nMeses);
+  return {
+    labels: claves.map(k => `${MES_ABBR[+k.slice(5, 7) - 1]} ${k.slice(2, 4)}`),
+    values: claves.map(k => calcFn(por[k])),
+  };
+}
 
 function semaforoNivel(valor, cfg) {
   if (valor === null || valor === undefined || isNaN(valor)) return 'gray';
@@ -1160,6 +1382,7 @@ function pintarKpiMeta(key, valor, cfg, formatFn) {
   const nivel = semaforoNivel(valor, cfg);
   const color = SEMAFORO_COLOR[nivel];
   document.getElementById(`kpi-meta-${key}`).textContent = valor === null ? '–' : formatFn(valor);
+  document.getElementById(`kpi-meta-${key}`).title = valor === null ? 'Sin datos con los filtros actuales (o el Excel no trae esta información)' : '';
   document.getElementById(`kpi-meta-${key}`).style.color = color;
   document.getElementById(`dot-meta-${key}`).style.background = color;
   document.getElementById(`card-meta-${key}`).style.borderLeftColor = color;
@@ -1219,16 +1442,6 @@ function updateIndicadoresMeta(rows) {
   const NSEM = 8;
   const total = rows.length;
 
-  // % Cumplimiento ANS
-  const ansRowsAll = rows.filter(r => r.cumpleAns === 'Sí' || r.cumpleAns === 'No');
-  const ansVal = ansRowsAll.length ? (ansRowsAll.filter(r => r.cumpleAns === 'Sí').length / ansRowsAll.length * 100) : null;
-  pintarKpiMeta('ans', ansVal, METAS.ans, v => v.toFixed(1) + '%');
-  const ansSer = computeWeeklySeries(rows, NSEM, wk => {
-    const a = wk.filter(r => r.cumpleAns === 'Sí' || r.cumpleAns === 'No');
-    return a.length ? a.filter(r => r.cumpleAns === 'Sí').length / a.length * 100 : null;
-  });
-  makeTrendChart('chart-trend-ans', ansSer.labels, ansSer.values, METAS.ans.bueno);
-
   // Prom. Horas Solución
   const horasArr = rows.map(r => r.tiempoSolucion).filter(v => v > 0);
   const horasVal = horasArr.length ? horasArr.reduce((a,b)=>a+b,0) / horasArr.length : null;
@@ -1260,6 +1473,19 @@ function updateIndicadoresMeta(rows) {
   pintarKpiMeta('cancelados', cancVal, METAS.pctCancel, v => v.toFixed(1) + '%');
   const cancSer = computeWeeklySeries(rows, NSEM, wk => wk.length ? wk.filter(r => r.etapa === 'Cancelada').length / wk.length * 100 : null);
   makeTrendChart('chart-trend-cancelados', cancSer.labels, cancSer.values, METAS.pctCancel.bueno);
+
+  // Promedio asignación → cierre (horas laborables) contra la meta = POLITICA ANS (HORAS)
+  const pa = promAsigCierre(rows);
+  const cfgPa = pa.meta !== null ? { tipo: 'max', bueno: pa.meta, medio: pa.meta * TOLERANCIA_AMBAR } : { tipo: 'max', bueno: 0, medio: 0 };
+  pintarKpiMeta('ansasig', pa.prom, cfgPa, v => v.toFixed(1) + ' h');
+  document.getElementById('kpi-meta-ansasig-meta').textContent = pa.meta !== null
+    ? `Meta: ${+pa.meta.toFixed(1)} h o menos (promedio de la columna POLITICA ANS (HORAS))`
+    : 'Meta: según la columna POLITICA ANS (HORAS)';
+  document.getElementById('kpi-meta-ansasig-sub').textContent = pa.n
+    ? `${pa.dentro.toLocaleString()} de ${pa.n.toLocaleString()} tickets dentro de la meta`
+    : 'Sin tickets resueltos con política y fechas válidas';
+  const paSer = computeMonthlySeries(rows, 8, mes => promAsigCierre(mes).prom);
+  makeTrendChart('chart-trend-ansasig', paSer.labels, paSer.values, pa.meta !== null ? pa.meta : 0);
 }
 
 // =============================================
@@ -1270,11 +1496,6 @@ function updateKPIs(rows) {
   const resueltos  = rows.filter(r => r.etapa === 'Resuelto').length;
   const pendientes = rows.filter(r => r.etapa === 'Nuevo').length;
   const cancelados = rows.filter(r => r.etapa === 'Cancelada').length;
-
-  // % Cumplimiento ANS: Sí / (Sí + No), igual que el Excel (excluye N/A y vacíos)
-  const ansRows = rows.filter(r => r.cumpleAns === 'Sí' || r.cumpleAns === 'No');
-  const ansSi   = rows.filter(r => r.cumpleAns === 'Sí').length;
-  const ansPct  = ansRows.length ? (ansSi / ansRows.length * 100) : null;
 
   const tiempos   = rows.map(r => r.tiempoSolucion).filter(v => v > 0);
   const avgH      = tiempos.length ? (tiempos.reduce((a,b)=>a+b,0)/tiempos.length) : 0;
@@ -1287,7 +1508,6 @@ function updateKPIs(rows) {
   document.getElementById('kpi-resueltos').textContent  = resueltos.toLocaleString();
   document.getElementById('kpi-pendientes').textContent = pendientes.toLocaleString();
   document.getElementById('kpi-cancelados').textContent = cancelados.toLocaleString();
-  document.getElementById('kpi-ans').textContent        = ansPct === null ? '–' : ansPct.toFixed(1) + '%';
   document.getElementById('kpi-tiempo').textContent     = avgH.toFixed(1);
   document.getElementById('kpi-tiempo-asig').textContent = avgHAsig.toFixed(1);
 
@@ -1295,7 +1515,6 @@ function updateKPIs(rows) {
   document.getElementById('kpi-resueltos-sub').textContent  = total ? `${(resueltos/total*100).toFixed(1)}% del total filtrado` : '';
   document.getElementById('kpi-pendientes-sub').textContent = total ? `${(pendientes/total*100).toFixed(1)}% del total filtrado` : '';
   document.getElementById('kpi-cancelados-sub').textContent = total ? `${(cancelados/total*100).toFixed(1)}% del total filtrado` : '';
-  document.getElementById('kpi-ans-sub').textContent        = `Sobre ${ansRows.length.toLocaleString()} con política ANS`;
   document.getElementById('kpi-tiempo-sub').textContent     = `Sobre ${tiempos.length.toLocaleString()} con tiempo registrado`;
   document.getElementById('kpi-tiempo-asig-sub').textContent = `Sobre ${tiemposA.length.toLocaleString()} con tiempo registrado`;
 }
@@ -1386,7 +1605,10 @@ function makeBar(id, labels, data, colors, opts) {
   });
 }
 
-function makeGroupedBar(id, labels, datasets) {
+function makeGroupedBar(id, labels, datasets, opts = {}) {
+  const unidad = opts.unidad || 'tickets';
+  const dec = opts.decimales || 0;
+  const fmt = v => dec ? Number(v).toFixed(dec) : Number(v).toLocaleString();
   const ctx = document.getElementById(id).getContext('2d');
   if (CHARTS[id]) CHARTS[id].destroy();
   CHARTS[id] = new Chart(ctx, {
@@ -1398,7 +1620,7 @@ function makeGroupedBar(id, labels, datasets) {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          display: true, position: 'bottom',
+          display: opts.leyenda !== false, position: 'bottom',
           labels: { font: { size: 10, family: "'Sora', sans-serif" }, boxWidth: 10, padding: 10 }
         },
         datalabels: {
@@ -1407,16 +1629,16 @@ function makeGroupedBar(id, labels, datasets) {
           anchor: 'end',
           align: 'end',
           font: { size: 9, weight: '700', family: "'JetBrains Mono', monospace" },
-          formatter: v => v.toLocaleString(),
+          formatter: fmt,
         },
         tooltip: {
           mode: 'index',
-          callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toLocaleString()} tickets` }
+          callbacks: { label: c => c.parsed.y === null ? ` ${c.dataset.label}: sin datos` : ` ${c.dataset.label}: ${fmt(c.parsed.y)} ${unidad}` }
         }
       },
       scales: {
         x: { grid: { display: false }, ticks: { font: { size: 10, family: "'Sora', sans-serif" }, color: '#9CA3AF', maxRotation: 28 } },
-        y: { grid: { color: '#F0F1F5', drawBorder: false }, ticks: { font: { size: 10, family: "'Sora', sans-serif" }, color: '#9CA3AF', precision: 0 } }
+        y: { beginAtZero: true, grid: { color: '#F0F1F5', drawBorder: false }, ticks: { font: { size: 10, family: "'Sora', sans-serif" }, color: '#9CA3AF', precision: dec ? 1 : 0 } }
       }
     }
   });
@@ -1425,23 +1647,24 @@ function makeGroupedBar(id, labels, datasets) {
 function updateAllCharts(rows) {
   const MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  // Mes: Total vs Resueltos (igual que la tabla "Tickets por mes" del Excel)
+  // Mes: Resueltos vs Cancelados
   const mes = countBy(rows, 'mes', MES);
   const mesLabelsAll = Object.keys(mes);
-  const resueltosPorMes = mesLabelsAll.map(m => rows.filter(r => r.mes === m && r.etapa === 'Resuelto').length);
+  const contarMes = etapa => mesLabelsAll.map(m => rows.filter(r => r.mes === m && r.etapa === etapa).length);
+  const resueltosPorMes  = contarMes('Resuelto');
+  const canceladosPorMes = contarMes('Cancelada');
   makeGroupedBar('chart-mes', mesLabelsAll, [
-    { label: 'Total',     data: Object.values(mes), backgroundColor: COLORS.violetLight, labelColor: COLORS.violet, borderRadius: 4 },
-    { label: 'Resueltos', data: resueltosPorMes,    backgroundColor: COLORS.green,       labelColor: COLORS.green,  borderRadius: 4 },
+    { label: 'Resueltos',  data: resueltosPorMes,  backgroundColor: COLORS.green,  labelColor: COLORS.green,  borderRadius: 4 },
+    { label: 'Cancelados', data: canceladosPorMes, backgroundColor: COLORS.tomato, labelColor: COLORS.tomato, borderRadius: 4 },
   ]);
   document.getElementById('cnt-mes').textContent = Object.keys(mes).length + ' meses';
 
-  // Nota aclaratoria: la diferencia Total - Resueltos no "desaparece", son los
-  // tickets Nuevo/Cancelado/En progreso (visibles en "Tickets por Mes — por Resultado")
+  // Nota: los tickets Nuevos / En progreso no aparecen en este gráfico (solo Resueltos y Cancelados)
   const totalMes = Object.values(mes).reduce((a,b)=>a+b,0);
-  const resueltosTotal = resueltosPorMes.reduce((a,b)=>a+b,0);
-  const sinResolver = totalMes - resueltosTotal;
-  document.getElementById('nota-mes-total').textContent = sinResolver > 0
-    ? `Los ${sinResolver.toLocaleString()} tickets que no aparecen como "Resueltos" están Nuevos, Cancelados o En Progreso — ver el desglose en "Tickets por Mes — por Resultado" más abajo.`
+  const mostrados = resueltosPorMes.reduce((a,b)=>a+b,0) + canceladosPorMes.reduce((a,b)=>a+b,0);
+  const otros = totalMes - mostrados;
+  document.getElementById('nota-mes-total').textContent = otros > 0
+    ? `No se muestran ${otros.toLocaleString()} tickets que siguen Nuevos o En progreso.`
     : '';
 
   // Vista auxiliar: igual que 'rows' pero con SIN_ASIGNAR en vez de '' para que
@@ -1468,18 +1691,28 @@ function updateAllCharts(rows) {
     bucket[etapaKey] = (bucket[etapaKey] || 0) + 1;
   });
 
-  // Un mini-gráfico independiente por resultado: cada uno con su propia escala,
-  // así los valores pequeños (p.ej. cancelados) se ven claramente en vez de
-  // perderse como una franja delgada dentro de una sola barra apilada.
+  // Un solo gráfico con barras agrupadas (lado a lado, no apiladas) para que los
+  // valores pequeños (cancelados, nuevos) no se pierdan junto a los resueltos.
   const getSerieMes = etapaNombre => mesLabels.map(m => (conteoMesEtapa[m] || {})[etapaNombre] || 0);
-  makeBar('chart-mes-resuelto',  mesLabels, getSerieMes('Resuelto'),    [ETAPA_COLORES['Resuelto']]);
-  makeBar('chart-mes-nuevo',     mesLabels, getSerieMes('Nuevo'),       [ETAPA_COLORES['Nuevo']]);
-  makeBar('chart-mes-cancelado', mesLabels, getSerieMes('Cancelada'),  [ETAPA_COLORES['Cancelada']]);
-  makeBar('chart-mes-progreso',  mesLabels, getSerieMes('En progreso'),[ETAPA_COLORES['En progreso']]);
+  const seriesResultado = [
+    { etapa: 'Resuelto',    label: 'Resueltos' },
+    { etapa: 'Nuevo',       label: 'Nuevos (pendientes)' },
+    { etapa: 'Cancelada',   label: 'Cancelados' },
+    { etapa: 'En progreso', label: 'En progreso' },
+  ].map(({ etapa, label }) => ({
+    label,
+    data: getSerieMes(etapa),
+    backgroundColor: ETAPA_COLORES[etapa],
+    labelColor: ETAPA_COLORES[etapa],
+    borderRadius: 4,
+  }));
+  makeGroupedBar('chart-mes-resultado', mesLabels, seriesResultado);
   document.getElementById('cnt-mes-tecnico').textContent = `${rows.length.toLocaleString()} tickets`;
 
-  // Desempeño por Responsable (Tickets, % ANS, Prom. horas solución)
+  // Desempeño por Responsable (Tickets, etapas, Prom. horas solución, meta)
   updateDesempenoResponsableTable(rowsAsig);
+  updateMatrizMeta(rowsAsig);
+  updateHorasSolucionMes(rows);
 
   // Tickets por día del mes en curso, por etapa
   updateDiaEtapaChart(rows);
@@ -1503,6 +1736,155 @@ function updateAllCharts(rows) {
   updateResumenSimple(rows, 'etapa', 'tabla-resumen-etapa', ETAPA_ORDEN);
   updateResumenSimple(rows, 'departamento', 'tabla-departamento');
   updateResumenSimple(rows, 'equipoMesaAyuda', 'tabla-equipo-mesa');
+  updateDetalleTickets(rows);
+}
+
+// =============================================
+// DETALLE DE TICKETS (tiempos) + PROMEDIOS
+// =============================================
+const DETALLE = { rows: [], page: 1, size: 50 };
+
+function parseHmsAHoras(v) {
+  const m = String(v ?? '').match(/^\s*(\d+):(\d{1,2}):(\d{1,2})/);
+  return m ? (+m[1] + (+m[2]) / 60 + (+m[3]) / 3600) : null;
+}
+function horasAHms(h) {
+  if (h === null || isNaN(h)) return '–';
+  const t = Math.round(h * 3600);
+  return `${Math.floor(t / 3600)}:${String(Math.floor((t % 3600) / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}
+const escHtml = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function updateDetalleTickets(rows) {
+  // Más recientes primero
+  DETALLE.rows = rows.slice().sort((a, b) =>
+    (b.fechaCreado + ' ' + b.horaCreado) < (a.fechaCreado + ' ' + a.horaCreado) ? -1 :
+    (b.fechaCreado + ' ' + b.horaCreado) > (a.fechaCreado + ' ' + a.horaCreado) ? 1 : 0);
+  DETALLE.page = 1;
+
+  const prom = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+  const asig = rows.map(r => parseHmsAHoras(r.tiempoPrimeraAsig)).filter(v => v !== null && v > 0);
+  const real = rows.map(r => parseHmsAHoras(r.tiempoSolucionReal)).filter(v => v !== null && v > 0);
+  const pAsig = prom(asig), pReal = prom(real);
+
+  document.getElementById('prom-asig').textContent = horasAHms(pAsig);
+  document.getElementById('prom-asig-sub').textContent = pAsig === null ? 'Sin datos' : `${pAsig.toFixed(2)} h · sobre ${asig.length.toLocaleString()} tickets`;
+  document.getElementById('prom-real').textContent = horasAHms(pReal);
+  document.getElementById('prom-real-sub').textContent = pReal === null ? 'Sin datos' : `${pReal.toFixed(2)} h · sobre ${real.length.toLocaleString()} tickets`;
+  document.getElementById('cnt-detalle').textContent = `${rows.length.toLocaleString()} tickets`;
+
+  renderDetallePage();
+}
+
+function renderDetallePage() {
+  const total = DETALLE.rows.length;
+  const paginas = Math.max(1, Math.ceil(total / DETALLE.size));
+  DETALLE.page = Math.min(Math.max(1, DETALLE.page), paginas);
+  const ini = (DETALLE.page - 1) * DETALLE.size;
+  const trozo = DETALLE.rows.slice(ini, ini + DETALLE.size);
+
+  const dash = v => (v === '' || v === null || v === undefined) ? '–' : escHtml(v);
+  const mono = "font-family:'JetBrains Mono',monospace;";
+  const td = (v, extra = '') => `<td style="padding:0.4rem 0.65rem; white-space:nowrap; ${extra}">${v}</td>`;
+
+  document.getElementById('tabla-detalle-tickets').innerHTML = trozo.map(r => `
+    <tr style="border-bottom:1px solid var(--border);">
+      ${td(dash(r.ref), mono + 'font-weight:700;')}
+      ${td(r.asignado ? escHtml(prettyName(r.asignado)) : '–')}
+      ${td(dash(r.etapa))}
+      ${td(dash(r.fechaCreado), mono)}
+      ${td(dash(r.horaCreado), mono)}
+      ${td(dash(r.fechaAsignacion), mono)}
+      ${td(dash(r.horaAsignacion), mono)}
+      ${td(dash(r.fechaCierre), mono)}
+      ${td(dash(r.horaCierre), mono)}
+      ${td(dash(r.tiempoPrimeraAsig), mono + 'text-align:right;')}
+      ${td(dash(r.tiempoSolucionSla), 'text-align:right;')}
+      ${td(dash(r.tiempoSolucionReal), mono + 'text-align:right;')}
+    </tr>`).join('');
+
+  document.getElementById('detalle-info').textContent = total
+    ? `Mostrando ${(ini + 1).toLocaleString()}–${(ini + trozo.length).toLocaleString()} de ${total.toLocaleString()} · Página ${DETALLE.page} de ${paginas}`
+    : 'Sin tickets con los filtros actuales';
+  document.getElementById('detalle-prev').disabled = DETALLE.page <= 1;
+  document.getElementById('detalle-next').disabled = DETALLE.page >= paginas;
+}
+
+// =============================================
+// PROM. HORAS SOLUCIÓN POR MES (corridas vs laborables, con la meta)
+// =============================================
+function updateHorasSolucionMes(rows) {
+  const por = {};
+  rows.forEach(r => { const k = (r.fecha || '').slice(0, 7); if (k) (por[k] = por[k] || []).push(r); });
+  const claves = Object.keys(por).sort().slice(-12);
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  const etiqueta = k => `${MES_ABBR[+k.slice(5, 7) - 1]} ${k.slice(2, 4)}`;
+  const r1 = v => v === null ? null : +v.toFixed(2);
+
+  // 1) Tiempo del Excel (HORAS SOLUCION): todas las horas del reloj entre la 1ra asignación y el cierre.
+  //    Es el mismo cálculo de la tarjeta "Prom. Horas Solución".
+  const conTiempo = r => r.tiempoSolucion > 0;
+  // 2) Tiempo dentro del horario laboral (HORARIO_LABORAL): solo las horas de lunes a viernes de 8:30 a 17:30.
+  const conHorario = r => r.tiempoSolucion > 0 && r.hLabAsig !== null && r.hLabAsig !== undefined;
+
+  const corridas   = claves.map(k => avg(por[k].filter(conTiempo).map(r => r.tiempoSolucion)));
+  const laborables = claves.map(k => avg(por[k].filter(conHorario).map(r => r.hLabAsig)));
+
+  makeGroupedBar('chart-horas-mes', claves.map(etiqueta), [
+    { label: 'Todas las horas (según el Excel)',          data: corridas.map(r1),   backgroundColor: COLORS.violetLight, labelColor: COLORS.violet, borderRadius: 4 },
+    { label: 'Solo horario laboral (L–V 8:30 a 17:30)',   data: laborables.map(r1), backgroundColor: COLORS.blue,        labelColor: COLORS.blue,   borderRadius: 4 },
+  ], { unidad: 'h', decimales: 1 });
+
+  const totC = avg(rows.filter(conTiempo).map(r => r.tiempoSolucion));
+  const totL = avg(rows.filter(conHorario).map(r => r.hLabAsig));
+  document.getElementById('cnt-horas-mes').textContent = totC === null
+    ? 'Sin datos'
+    : `Prom. general: ${totC.toFixed(1)} h todas · ${totL === null ? '–' : totL.toFixed(1)} h en horario`;
+}
+
+// =============================================
+// META POR PERSONA Y MES (promedio asignación → cierre vs POLITICA ANS (HORAS))
+// =============================================
+function updateMatrizMeta(rowsAsig) {
+  const head = document.getElementById('matriz-meta-head');
+  const body = document.getElementById('matriz-meta-body');
+  const ev = evaluables(rowsAsig);
+
+  const meses = [...new Set(ev.map(r => (r.fecha || '').slice(0, 7)).filter(Boolean))].sort().slice(-12);
+  const etiqueta = k => `${MES_ABBR[+k.slice(5, 7) - 1]} ${k.slice(2, 4)}`;
+  const th = (txt, align) => `<th style="text-align:${align}; padding:0.5rem 0.75rem; color:var(--muted); font-size:0.66rem; text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap;">${txt}</th>`;
+  head.innerHTML = th('Responsable', 'left') + th('Meta', 'right') + meses.map(k => th(etiqueta(k), 'center')).join('') + th('Todo el período', 'center');
+
+  const celda = rs => {
+    const x = promAsigCierre(rs);
+    if (!x.n) return '<td style="padding:0.45rem 0.6rem; text-align:center; color:var(--muted);">–</td>';
+    const col = SEMAFORO_COLOR[nivelVsMeta(x.prom, x.meta)];
+    const tip = `${x.n} tickets resueltos · meta ${+x.meta.toFixed(1)} h · ${x.dentro} dentro de la meta`;
+    return `<td title="${tip}" style="padding:0.45rem 0.6rem; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:700; color:${col}; background:${col}1F; border-radius:6px;">${x.prom.toFixed(1)} h</td>`;
+  };
+
+  const filas = [];
+  filas.push({ nombre: 'Todo el equipo', color: COLORS.violet, rows: rowsAsig });
+  const porTec = {};
+  rowsAsig.forEach(r => (porTec[r.asignado] = porTec[r.asignado] || []).push(r));
+  Object.entries(porTec)
+    .map(([nombre, rs]) => ({ nombre: nombre === SIN_ASIGNAR ? nombre : prettyName(nombre), color: ASSIGNEE_COLORS[nombre] || COLORS.violet, rows: rs, n: evaluables(rs).length }))
+    .filter(f => f.n > 0)
+    .sort((a, b) => b.n - a.n)
+    .forEach(f => filas.push(f));
+
+  body.innerHTML = filas.map((f, i) => {
+    const todo = promAsigCierre(f.rows);
+    const meta = todo.meta === null ? '–' : `${+todo.meta.toFixed(1)} h`;
+    const porMes = {};
+    f.rows.forEach(r => { const k = (r.fecha || '').slice(0, 7); if (k) (porMes[k] = porMes[k] || []).push(r); });
+    return `<tr style="border-bottom:1px solid var(--border);${i === 0 ? ' background:#FAF8FE;' : ''}">
+      <td style="padding:0.45rem 0.75rem; font-weight:700; color:${f.color}; white-space:nowrap;">${escHtml(f.nombre)}</td>
+      <td style="padding:0.45rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:var(--muted);">${meta}</td>
+      ${meses.map(k => celda(porMes[k] || [])).join('')}
+      ${celda(f.rows)}
+    </tr>`;
+  }).join('');
 }
 
 // =============================================
@@ -1556,7 +1938,7 @@ const ETAPA_COLORES = {
   'Nuevo':       COLORS.amber,
   'En progreso': COLORS.blue,
   'Resuelto':    COLORS.green,
-  'Cancelada':   '#6B7280', // gris oscuro (COLORS.steel es demasiado claro para texto blanco encima)
+  'Cancelada':   COLORS.tomato,
   'Otra':        '#9CA3AF',
 };
 
@@ -1570,7 +1952,7 @@ function updateDiaEtapaChart(rows) {
   if (fechasValidas.length === 0) {
     document.getElementById('titulo-dia-etapa').textContent = 'Tickets por Día';
     document.getElementById('cnt-dia-etapa').textContent = '0 tickets';
-    ['resuelto','nuevo','cancelado','progreso'].forEach(k => makeBar(`chart-dia-${k}`, [], [], ['#9CA3AF']));
+    makeGroupedBar('chart-dia-resultado', [], []);
     return;
   }
   const ultimaFecha = fechasValidas[fechasValidas.length - 1]; // 'YYYY-MM-DD'
@@ -1599,13 +1981,21 @@ function updateDiaEtapaChart(rows) {
     bucket[etapaKey] = (bucket[etapaKey] || 0) + 1;
   });
 
-  // Un mini-gráfico independiente por resultado (misma razón que en la vista por mes)
+  // Un solo gráfico agrupado, con las mismas series y colores que "Tickets por Mes — por Resultado"
   const diaLabels = dias.map(String);
   const getSerieDia = etapaNombre => dias.map(d => (conteoDiaEtapa[d] || {})[etapaNombre] || 0);
-  makeBar('chart-dia-resuelto',  diaLabels, getSerieDia('Resuelto'),     [ETAPA_COLORES['Resuelto']]);
-  makeBar('chart-dia-nuevo',     diaLabels, getSerieDia('Nuevo'),        [ETAPA_COLORES['Nuevo']]);
-  makeBar('chart-dia-cancelado', diaLabels, getSerieDia('Cancelada'),   [ETAPA_COLORES['Cancelada']]);
-  makeBar('chart-dia-progreso',  diaLabels, getSerieDia('En progreso'), [ETAPA_COLORES['En progreso']]);
+  makeGroupedBar('chart-dia-resultado', diaLabels, [
+    { etapa: 'Resuelto',    label: 'Resueltos' },
+    { etapa: 'Nuevo',       label: 'Nuevos (pendientes)' },
+    { etapa: 'Cancelada',   label: 'Cancelados' },
+    { etapa: 'En progreso', label: 'En progreso' },
+  ].map(({ etapa, label }) => ({
+    label,
+    data: getSerieDia(etapa),
+    backgroundColor: ETAPA_COLORES[etapa],
+    labelColor: ETAPA_COLORES[etapa],
+    borderRadius: 4,
+  })));
   document.getElementById('cnt-dia-etapa').textContent = `${rowsMes.length.toLocaleString()} tickets`;
 }
 
@@ -1637,7 +2027,7 @@ function updateClienteMesTable(rows, mesLabels) {
 }
 
 // =============================================
-// DESEMPEÑO POR RESPONSABLE (Tickets, % ANS, Prom. horas solución)
+// DESEMPEÑO POR RESPONSABLE (Tickets, etapas, Prom. horas solución, meta)
 // =============================================
 function updateDesempenoResponsableTable(rowsAsig) {
   const tbody = document.getElementById('tabla-desempeno-responsable');
@@ -1646,14 +2036,11 @@ function updateDesempenoResponsableTable(rowsAsig) {
   const porTecnico = {};
   rowsAsig.forEach(r => {
     const b = porTecnico[r.asignado] || (porTecnico[r.asignado] = {
-      total: 0, ansSi: 0, ansTotal: 0, horas: [],
-      resuelto: 0, nuevo: 0, cancelada: 0, enProgreso: 0,
+      total: 0, horas: [],
+      resuelto: 0, nuevo: 0, cancelada: 0, enProgreso: 0, rows: [],
     });
     b.total++;
-    if (r.cumpleAns === 'Sí' || r.cumpleAns === 'No') {
-      b.ansTotal++;
-      if (r.cumpleAns === 'Sí') b.ansSi++;
-    }
+    b.rows.push(r);
     if (r.tiempoSolucion > 0) b.horas.push(r.tiempoSolucion);
     if (r.etapa === 'Resuelto') b.resuelto++;
     else if (r.etapa === 'Nuevo') b.nuevo++;
@@ -1664,8 +2051,10 @@ function updateDesempenoResponsableTable(rowsAsig) {
   Object.entries(porTecnico)
     .sort((a, b) => b[1].total - a[1].total)
     .forEach(([nombre, d]) => {
-      const ansPct = d.ansTotal ? (d.ansSi / d.ansTotal * 100).toFixed(1) + '%' : '–';
       const avgH   = d.horas.length ? (d.horas.reduce((a,b)=>a+b,0)/d.horas.length).toFixed(1) : '–';
+      const pa     = promAsigCierre(d.rows);
+      const colA   = SEMAFORO_COLOR[nivelVsMeta(pa.prom, pa.meta)];
+      const textoA = pa.n === 0 ? '–' : `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colA};margin-right:0.4rem;"></span>${pa.prom.toFixed(1)} h <span style="font-weight:400; opacity:0.65;">/ meta ${+pa.meta.toFixed(1)}</span>`;
       const color  = ASSIGNEE_COLORS[nombre] || COLORS.violet;
       const label  = nombre === SIN_ASIGNAR ? nombre : prettyName(nombre);
 
@@ -1678,8 +2067,8 @@ function updateDesempenoResponsableTable(rowsAsig) {
         <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.amber};">${d.nuevo.toLocaleString()}</td>
         <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.tomato};">${d.cancelada.toLocaleString()}</td>
         <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.blue};">${d.enProgreso.toLocaleString()}</td>
-        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace;">${ansPct}</td>
         <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace;">${avgH}</td>
+        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700; color:${colA};" title="${pa.dentro} de ${pa.n} tickets resueltos dentro de la meta">${textoA}</td>
       `;
       tbody.appendChild(tr);
     });
