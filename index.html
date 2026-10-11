@@ -184,6 +184,18 @@
   .filter-select:focus { border-color: var(--violet); }
   .filter-select.active { border-color: var(--violet); background-color: var(--violet-pale); color: var(--violet); font-weight: 600; }
 
+  /* ── SEARCH ASSIGNEE ── */
+  .search-assignee {
+    width: 100%; max-width: 280px;
+    padding: 0.42rem 0.85rem 0.42rem 2rem;
+    border: 1.5px solid var(--steel);
+    border-radius: 8px; font-size: 0.78rem;
+    font-family: 'Sora', sans-serif;
+    color: var(--text); background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%2349267F' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") no-repeat 0.55rem center;
+    outline: none; transition: border-color 0.2s;
+  }
+  .search-assignee:focus { border-color: var(--violet); }
+
   /* ── ASSIGNEE PILLS ── */
   .assignee-pills { display: flex; flex-wrap: wrap; gap: 0.6rem; }
   .assignee-pill {
@@ -314,6 +326,10 @@
 
     <!-- ASSIGNEE QUICK FILTER (estilo pestañas) -->
     <div class="chart-card" style="padding: 1.2rem 1.5rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.6rem; margin-bottom:0.75rem;">
+        <span style="font-size:0.78rem; font-weight:700; color:var(--violet);">👤 Filtrar por Asignado a</span>
+        <input type="search" id="search-assignee" class="search-assignee" placeholder="Buscar técnico…" oninput="debounceSearchAssignee(this.value)">
+      </div>
       <div class="assignee-pills" id="assignee-pills-container">
         <span class="assignee-pill all active" data-assignee="all" onclick="setAssigneePill(this)">
           <span class="pill-icon">🏢</span>Vista General<span class="pill-count" id="cnt-pill-all"></span>
@@ -530,6 +546,7 @@
     <div class="chart-card">
       <div class="chart-title">
         <span class="chart-title-left">Desempeño por Responsable</span>
+        <span class="badge" id="cnt-desempeno"></span>
       </div>
       <div class="chart-scroll">
         <table style="width:100%; border-collapse:collapse; font-size:0.8rem; min-width:780px;">
@@ -547,6 +564,18 @@
           </thead>
           <tbody id="tabla-desempeno-responsable"></tbody>
         </table>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:0.6rem; margin-top:0.8rem; font-size:0.74rem; color:var(--muted);">
+        <span id="desempeno-info"></span>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <label>Filas por página
+            <select id="desempeno-size" class="filter-select" style="width:auto; display:inline-block; padding:0.2rem 0.5rem;" onchange="DESEMPENO.size=parseInt(this.value,10); DESEMPENO.page=1; renderDesempenoPage();">
+              <option value="10" selected>10</option><option value="25">25</option><option value="50">50</option>
+            </select>
+          </label>
+          <button class="btn-reset-filters" id="desempeno-prev" onclick="DESEMPENO.page--; renderDesempenoPage();">← Anterior</button>
+          <button class="btn-reset-filters" id="desempeno-next" onclick="DESEMPENO.page++; renderDesempenoPage();">Siguiente →</button>
+        </div>
       </div>
     </div>
 
@@ -1206,6 +1235,8 @@ function resetFilters(silent) {
     el.value = '';
     el.classList.remove('active');
   });
+  const searchEl = document.getElementById('search-assignee');
+  if (searchEl) { searchEl.value = ''; clearTimeout(_searchAssigneeTimer); filterAssigneePills(''); }
   document.querySelectorAll('.assignee-pill').forEach(p => { p.classList.remove('active'); applyPillStyle(p, false); });
   document.querySelector('.assignee-pill.all').classList.add('active');
   if (!silent) applyFilters();
@@ -2027,12 +2058,29 @@ function updateClienteMesTable(rows, mesLabels) {
 }
 
 // =============================================
-// DESEMPEÑO POR RESPONSABLE (Tickets, etapas, Prom. horas solución, meta)
+// FILTRO DE BÚSQL DE PILLS DE ASIGNADO
 // =============================================
-function updateDesempenoResponsableTable(rowsAsig) {
-  const tbody = document.getElementById('tabla-desempeno-responsable');
-  tbody.innerHTML = '';
+let _searchAssigneeTimer = null;
+function debounceSearchAssignee(value) {
+  clearTimeout(_searchAssigneeTimer);
+  _searchAssigneeTimer = setTimeout(() => filterAssigneePills(value), 350);
+}
 
+function filterAssigneePills(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll('#assignee-pills-container .assignee-pill').forEach(pill => {
+    if (pill.classList.contains('all')) { pill.style.display = ''; return; }
+    const name = (pill.textContent || '').toLowerCase();
+    pill.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+// =============================================
+// DESEMPEÑO POR RESPONSABLE (con paginación)
+// =============================================
+const DESEMPENO = { rows: [], page: 1, size: 10 };
+
+function updateDesempenoResponsableTable(rowsAsig) {
   const porTecnico = {};
   rowsAsig.forEach(r => {
     const b = porTecnico[r.asignado] || (porTecnico[r.asignado] = {
@@ -2048,30 +2096,51 @@ function updateDesempenoResponsableTable(rowsAsig) {
     else if (r.etapa === 'En progreso') b.enProgreso++;
   });
 
-  Object.entries(porTecnico)
+  DESEMPENO.rows = Object.entries(porTecnico)
     .sort((a, b) => b[1].total - a[1].total)
-    .forEach(([nombre, d]) => {
-      const avgH   = d.horas.length ? (d.horas.reduce((a,b)=>a+b,0)/d.horas.length).toFixed(1) : '–';
-      const pa     = promAsigCierre(d.rows);
-      const colA   = SEMAFORO_COLOR[nivelVsMeta(pa.prom, pa.meta)];
-      const textoA = pa.n === 0 ? '–' : `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colA};margin-right:0.4rem;"></span>${pa.prom.toFixed(1)} h <span style="font-weight:400; opacity:0.65;">/ meta ${+pa.meta.toFixed(1)}</span>`;
-      const color  = ASSIGNEE_COLORS[nombre] || COLORS.violet;
-      const label  = nombre === SIN_ASIGNAR ? nombre : prettyName(nombre);
+    .map(([nombre, d]) => ({ nombre, d }));
+  DESEMPENO.page = 1;
+  document.getElementById('cnt-desempeno').textContent = `${DESEMPENO.rows.length} responsables`;
+  renderDesempenoPage();
+}
 
-      const tr = document.createElement('tr');
-      tr.style.borderBottom = '1px solid var(--border)';
-      tr.innerHTML = `
-        <td style="padding:0.5rem 0.75rem; font-weight:600; color:${color};">${label}</td>
-        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700;">${d.total.toLocaleString()}</td>
-        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.green};">${d.resuelto.toLocaleString()}</td>
-        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.amber};">${d.nuevo.toLocaleString()}</td>
-        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.tomato};">${d.cancelada.toLocaleString()}</td>
-        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.blue};">${d.enProgreso.toLocaleString()}</td>
-        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace;">${avgH}</td>
-        <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700; color:${colA};" title="${pa.dentro} de ${pa.n} tickets resueltos dentro de la meta">${textoA}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+function renderDesempenoPage() {
+  const total = DESEMPENO.rows.length;
+  const paginas = Math.max(1, Math.ceil(total / DESEMPENO.size));
+  DESEMPENO.page = Math.min(Math.max(1, DESEMPENO.page), paginas);
+  const ini = (DESEMPENO.page - 1) * DESEMPENO.size;
+  const trozo = DESEMPENO.rows.slice(ini, ini + DESEMPENO.size);
+
+  const tbody = document.getElementById('tabla-desempeno-responsable');
+  tbody.innerHTML = '';
+  trozo.forEach(({ nombre, d }) => {
+    const avgH   = d.horas.length ? (d.horas.reduce((a,b)=>a+b,0)/d.horas.length).toFixed(1) : '–';
+    const pa     = promAsigCierre(d.rows);
+    const colA   = SEMAFORO_COLOR[nivelVsMeta(pa.prom, pa.meta)];
+    const textoA = pa.n === 0 ? '–' : `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colA};margin-right:0.4rem;"></span>${pa.prom.toFixed(1)} h <span style="font-weight:400; opacity:0.65;">/ meta ${+pa.meta.toFixed(1)}</span>`;
+    const color  = ASSIGNEE_COLORS[nombre] || COLORS.violet;
+    const label  = nombre === SIN_ASIGNAR ? nombre : prettyName(nombre);
+
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.innerHTML = `
+      <td style="padding:0.5rem 0.75rem; font-weight:600; color:${color};">${label}</td>
+      <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700;">${d.total.toLocaleString()}</td>
+      <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.green};">${d.resuelto.toLocaleString()}</td>
+      <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.amber};">${d.nuevo.toLocaleString()}</td>
+      <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.tomato};">${d.cancelada.toLocaleString()}</td>
+      <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; color:${COLORS.blue};">${d.enProgreso.toLocaleString()}</td>
+      <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace;">${avgH}</td>
+      <td style="padding:0.5rem 0.75rem; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:700; color:${colA};" title="${pa.dentro} de ${pa.n} tickets resueltos dentro de la meta">${textoA}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('desempeno-info').textContent = total
+    ? `Mostrando ${(ini + 1).toLocaleString()}–${(ini + trozo.length).toLocaleString()} de ${total.toLocaleString()} · Página ${DESEMPENO.page} de ${paginas}`
+    : 'Sin datos con los filtros actuales';
+  document.getElementById('desempeno-prev').disabled = DESEMPENO.page <= 1;
+  document.getElementById('desempeno-next').disabled = DESEMPENO.page >= paginas;
 }
 
 // =============================================
